@@ -70,7 +70,18 @@ APITESTS = \
   testsuite_mpi_115 \
   testsuite_mpi_190 \
   testsuite_mpi_207 \
-  testsuite_mpi_239 
+  testsuite_mpi_239 \
+  testsuite_mpi_300 \
+  testsuite_mpi_301 \
+  testsuite_mpi_302 \
+  testsuite_mpi_303 \
+  testsuite_mpi_304 \
+  testsuite_mpi_305 \
+  testsuite_mpi_306 \
+  testsuite_mpi_306 \
+	testsuite_mpi_307 \
+  testsuite_mpi_308 \
+  testsuite_mpi_309
 
 APITESTS_DISABLED = \
   testsuite_mpi_88 \

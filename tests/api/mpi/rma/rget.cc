@@ -46,17 +46,19 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <stdio.h>
 #include "mpitest.h"
 
-namespace win_create {
+namespace rget {
 /**
-static char MTEST_Descrip[] = "MPI_Win_create test";
+static char MTEST_Descrip[] = "MPI_Rget test";
 */
 
-int win_create(int argc, char** argv) {
+// Also tests that MPI_Win_free calls malloc
+int rget(int argc, char** argv) {
   int errs = 0;
   MTest_Init(&argc, &argv);
-  MTest_Finalize(errs);
+  MTest_Finalize(++errs);
   MPI_Finalize();
-  return 0;
+  return 1;
 }
 
-}  // namespace win_create
+}  // namespace rget
+
