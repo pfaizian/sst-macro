@@ -260,7 +260,8 @@ TEST_SOURCE_FILES = \
   pt2pt/sendrecv3.cc \
   pt2pt/sendself.cc \
   pt2pt/waitany-null.cc \
-  pt2pt/waittestnull.cc 
+  pt2pt/waittestnull.cc \
+  rma/win_create.cc 
 
 EXTRA_DIST += $(TEST_SOURCE_FILES)
 
