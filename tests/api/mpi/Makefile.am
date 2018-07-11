@@ -261,7 +261,16 @@ TEST_SOURCE_FILES = \
   pt2pt/sendself.cc \
   pt2pt/waitany-null.cc \
   pt2pt/waittestnull.cc \
-  rma/win_create.cc 
+  rma/win_create_free.cc \
+  rma/win_fence.cc \
+  rma/win_alloc.cc \
+  rma/raccumulate.cc \
+  rma/accumulate.cc \
+  rma/rget.cc \
+  rma/get.cc \
+  rma/rput.cc \
+  rma/put.cc \
+  rma/win_lock_unlock_all.cc 
 
 EXTRA_DIST += $(TEST_SOURCE_FILES)
 
