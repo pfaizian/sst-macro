@@ -52,7 +52,8 @@ RUN source `spack/bin/spack location -i environment-modules`/Modules/init/bash &
     CFLAGS='-fdata-sections -ffunction-sections -Wl,-gc-sections' CXXFLAGS='-fdata-sections -ffunction-sections -Wl,-gc-sections' CC=gcc CXX=g++ ../configure --with-clang=/home/build/clang && \
     make -j
 
-# Make check will throw timeout errors when run in parallel
+# Check the build
+# Run serially because it may otherwise throw timeout errors
 RUN source `spack/bin/spack location -i environment-modules`/Modules/init/bash && \
     source spack/share/spack/setup-env.sh && \
     cd sst-macro/build && \
@@ -64,23 +65,3 @@ RUN source `spack/bin/spack location -i environment-modules`/Modules/init/bash &
     source spack/share/spack/setup-env.sh && \
     spack load otf2 && \
     make -C sst-macro/build install
-
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-RUN echo "NOTE: The executables have dynamic links that must be copied to the final image:" && \
-    ldd /usr/local/bin/sstmac /usr/local/bin/sstmac_clang && \
-    libs=`ldd /usr/local/bin/{sstmac,sstmac_clang} | awk '{print $3}' | sed '/^$/d' | sort -u` && \
-    mkdir libs && \
-    cp $libs libs
-
-# Flatten the symlink in /lib64 so it can be copied directly into the squashed image
-RUN cp --remove-destination `readlink /lib64/ld-linux-x86-64.so.2` /lib64/ld-linux-x86-64.so.2
-
-# Wipe out the build image
-# Save the binaries and the components necessary for dynamic linking
-FROM scratch
-COPY --from=builder /lib64 /lib64
-COPY --from=builder /usr/local/bin/sstmac /usr/local/bin/sstmac_clang /
-COPY --from=builder /home/build/libs /lib
-
-# Just to show it runs
-CMD ["/sstmac", "-h"]
