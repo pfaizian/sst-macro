@@ -71,17 +71,48 @@ APITESTS = \
   testsuite_mpi_190 \
   testsuite_mpi_207 \
   testsuite_mpi_239 \
-  testsuite_mpi_300 \
-  testsuite_mpi_301 \
-  testsuite_mpi_302 \
-  testsuite_mpi_303 \
-  testsuite_mpi_304 \
-  testsuite_mpi_305 \
-  testsuite_mpi_306 \
-  testsuite_mpi_306 \
-	testsuite_mpi_307 \
-  testsuite_mpi_308 \
-  testsuite_mpi_309
+  testsuite_mpi_258 \
+  testsuite_mpi_259 \
+  testsuite_mpi_260 \
+  testsuite_mpi_261 \
+  testsuite_mpi_262 \
+  testsuite_mpi_263 \
+  testsuite_mpi_264 \
+  testsuite_mpi_265 \
+  testsuite_mpi_266 \
+  testsuite_mpi_267 \
+  testsuite_mpi_268 \
+  testsuite_mpi_269 \
+  testsuite_mpi_270 \
+  testsuite_mpi_271 \
+  testsuite_mpi_272 \
+  testsuite_mpi_273 \
+  testsuite_mpi_274 \
+  testsuite_mpi_275 \
+  testsuite_mpi_276 \
+  testsuite_mpi_277 \
+  testsuite_mpi_278 \
+  testsuite_mpi_279 \
+  testsuite_mpi_280 \
+  testsuite_mpi_281 \
+  testsuite_mpi_282 \
+  testsuite_mpi_283 \
+  testsuite_mpi_284 \
+  testsuite_mpi_285 \
+  testsuite_mpi_286 \
+  testsuite_mpi_287 \
+  testsuite_mpi_288 \
+  testsuite_mpi_289 \
+  testsuite_mpi_290 \
+  testsuite_mpi_291 \
+  testsuite_mpi_292 \
+  testsuite_mpi_293 \
+  testsuite_mpi_294 \
+  testsuite_mpi_295 \
+  testsuite_mpi_296 \
+  testsuite_mpi_297 \
+  testsuite_mpi_298 \
+  testsuite_mpi_299 
 
 APITESTS_DISABLED = \
   testsuite_mpi_88 \
