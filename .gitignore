@@ -101,5 +101,6 @@ pp.*
 *.pyc
 *.o
 *.yaml
+*.ipynb_checkpoints
 
 sstmac_repo.h
