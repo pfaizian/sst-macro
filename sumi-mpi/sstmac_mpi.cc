@@ -271,19 +271,15 @@ extern "C" int sstmac_comm_create_group(MPI_Comm comm, MPI_Group group, int tag,
   return sumi::sstmac_mpi()->comm_create_group(comm,group,tag,newcomm);
 }
 
-extern "C" int sstmac_win_create(void *base, MPI_Aint size, int disp_unit, MPI_Info info,
-                                     MPI_Comm comm, MPI_Win *win){
 extern "C" int sstmac_win_create(void *base, MPI_Aint size, int disp_unit,
                                  MPI_Info info, MPI_Comm comm, MPI_Win *win) {
   return sumi::sstmac_mpi()->win_create(base, size, disp_unit, info, comm, win);
 }
 
-extern "C" int sstmac_win_free(MPI_Win *win){
 extern "C" int sstmac_win_free(MPI_Win *win) {
   return sumi::sstmac_mpi()->win_free(win);
 }
 
-extern "C" int sstmac_win_lock(int lock_type, int rank, int assert, MPI_Win win){
 extern "C" int sstmac_win_fence(int lock_type, int rank, int assert,
                                 MPI_Win *win) {
   return sumi::sstmac_mpi()->win_fence(lock_type, rank, assert, win);
@@ -315,6 +311,8 @@ extern "C" int sstmac_win_get_name(MPI_Win win, char *win_name,
 extern "C" int sstmac_free_mem(void *baseptr) {
   return sumi::sstmac_mpi()->free_mem(baseptr);
 }
+
+extern "C" int sstmac_win_lock(int lock_type, int rank, int assert, MPI_Win win){
   return sumi::sstmac_mpi()->win_lock(lock_type, rank, assert, win);
 }
 
@@ -337,7 +335,6 @@ extern "C" int sstmac_mpi_put(const void *origin_addr, int origin_count, MPI_Dat
                                  target_datatype, win);
 }
 
-extern "C" int sstmac_group_range_incl(MPI_Group group, int n, int ranges[][3], MPI_Group *newgroup){
 extern "C" int sstmac_win_create_keyval(
     MPI_Win_copy_attr_function *win_copy_attr_fn,
     MPI_Win_delete_attr_function *win_delete_attr_fn, int *win_keyval,
@@ -375,6 +372,8 @@ extern "C" int sstmac_win_get_attr(MPI_Win win, int win_keyval,
                                    void *attribute_val, int *flag) {
   return sumi::sstmac_mpi()->win_get_attr(win, win_keyval, attribute_val, flag);
 }
+
+extern "C" int sstmac_group_range_incl(MPI_Group group, int n, int ranges[][3], MPI_Group *newgroup){
   return sumi::sstmac_mpi()->group_range_incl(group, n, ranges, newgroup);
 }
 
