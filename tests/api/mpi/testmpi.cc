@@ -626,6 +626,7 @@ enum TEST_MODE {
 */
 
 // -------------- RMA ------------ //
+<<<<<<< HEAD
 // #include "rma/accfence1.cc" // contains dtpools.h
 #include "rma/accfence2.cc"
 #include "rma/accfence2_am.cc"
@@ -672,6 +673,60 @@ enum TEST_MODE {
 #include "rma/transpose7.cc"
 // #include "rma/wincall.cc" // don't want to implement set_errhandler
 #include "rma/winname.cc"
+=======
+// #include "rma/accfence1.cc"
+// #include "rma/accfence2_am.cc"
+// #include "rma/accfence2.cc"
+// #include "rma/allocmem.cc"
+// #include "rma/attrorderwin.cc"
+// #include "rma/baseattrwin.cc"
+// #include "rma/contig_displ.cc"
+// #include "rma/fetchandadd_am.cc"
+// #include "rma/fetchandadd_tree_am.cc"
+// #include "rma/fetchandadd_tree.cc"
+// #include "rma/fetchandadd.cc"
+// #include "rma/fkeyvalwin.cc"
+// #include "rma/getfence1.cc"
+// #include "rma/getgroup.cc"
+// #include "rma/ircpi.cc"
+// #include "rma/lockcontention.cc"
+// #include "rma/locknull.cc"
+// #include "rma/mixedsync.cc"
+// #include "rma/nullpscw.cc"
+// #include "rma/putfence1.cc"
+// #include "rma/putfidx.cc"
+// #include "rma/putpscw1.cc"
+// #include "rma/selfrma.cc"
+// #include "rma/test1_am.cc"
+// #include "rma/test1.cc"
+// #include "rma/test2_am.cc"
+// #include "rma/test2.cc"
+// #include "rma/test3_am.cc"
+// #include "rma/test3.cc"
+// #include "rma/test4_am.cc"
+// #include "rma/test4.cc"
+// #include "rma/test5_am.cc"
+// #include "rma/test5.cc"
+// #include "rma/transpose1.cc"
+// #include "rma/transpose2.cc"
+// #include "rma/transpose3.cc"
+// #include "rma/transpose4.cc"
+// #include "rma/transpose5.cc"
+// #include "rma/transpose6.cc"
+// #include "rma/transpose7.cc"
+// #include "rma/wincall.cc"
+// #include "rma/winname.cc"
+#include "rma/raccumulate.cc"
+#include "rma/accumulate.cc"
+#include "rma/rget.cc"
+#include "rma/get.cc"
+#include "rma/rput.cc"
+#include "rma/put.cc"
+#include "rma/win_alloc.cc"
+#include "rma/win_create_free.cc"
+#include "rma/win_fence.cc"
+#include "rma/win_lock_unlock_all.cc"
+>>>>>>> 27a825a549968bc9e29188f50edca09ea2e7cd68
 
 int testmode_ = -1;
 
@@ -1415,6 +1470,7 @@ int USER_MAIN(int argc, char* argv[]) {
     // case RMA_ACCFENCE1:
     //   accfence1::accfence1(argc, argv);
     //   break;
+<<<<<<< HEAD
     case RMA_ACCFENCE2_AM:
       accfence2_am::accfence2_am(argc, argv);
       break;
@@ -1529,6 +1585,259 @@ int USER_MAIN(int argc, char* argv[]) {
     case RMA_WINNAME:
       winname::winname(argc, argv);
       break;
+=======
+  case PT2PT_PROBE_UNEXP:
+    probe_unexp::probe_unexp(argc, argv);
+    break;
+  case PT2PT_PROBENULL:
+    probenull::probenull(argc, argv);
+    break;
+  /*** case PT2PT_PSCANCEL:
+    pscancel::pscancel(argc, argv);
+    break;
+  case PT2PT_RCANCEL:
+    rcancel::rcancel(argc, argv);
+    break;
+  case PT2PT_RQFREEB:
+    rqfreeb::rqfreeb(argc, argv);
+    break;
+  case PT2PT_RQSTATUS:
+    rqstatus::rqstatus(argc, argv);
+    break;
+  case PT2PT_SCANCEL:
+    scancel::scancel(argc, argv);
+    break;
+  case PT2PT_SCANCEL2:
+    scancel2::scancel2(argc, argv);
+    break; */
+  case PT2PT_SENDALL:
+    sendall::sendall(argc, argv);
+    break;
+  case PT2PT_SENDFLOOD:
+    sendflood::sendflood(argc, argv);
+    break;
+  case PT2PT_SENDRECV1:
+    sendrecv1::sendrecv1(argc, argv);
+    break;
+  case PT2PT_SENDRECV2:
+    sendrecv2::sendrecv2(argc, argv);
+    break;
+  case PT2PT_SENDRECV3:
+    sendrecv3::sendrecv3(argc, argv);
+    break;
+  case PT2PT_SENDSELF:
+    sendself::sendself(argc, argv);
+    break;
+  case PT2PT_WAITANY_NULL:
+    waitany_null::waitany_null(argc, argv);
+    break;
+  case PT2PT_WAITTESTNULL:
+    waittestnull::waittestnull(argc, argv);
+    break;
+  /*** case TOPO_CARTCREATES:
+    cartcreates::cartcreates(argc, argv);
+    break;
+  case TOPO_CARTMAP1:
+    cartmap1::cartmap1(argc, argv);
+    break;
+  case TOPO_CARTSHIFT1:
+    cartshift1::cartshift1(argc, argv);
+    break;
+  case TOPO_CARTSUBALL:
+    cartsuball::cartsuball(argc, argv);
+    break;
+  case TOPO_CARTZERO:
+    cartzero::cartzero(argc, argv);
+    break;
+  case TOPO_DGRAPH_UNWGT:
+    dgraph_unwgt::dgraph_unwgt(argc, argv);
+    break;
+  case TOPO_DIMS1:
+    dims1::dims1(argc, argv);
+    break;
+  case TOPO_DIMS2:
+    dims2::dims2(argc, argv);
+    break;
+  case TOPO_DISTGRAPH1:
+    distgraph1::distgraph1(argc, argv);
+    break;
+  case TOPO_GRAPHCR:
+    graphcr::graphcr(argc, argv);
+    break;
+  case TOPO_GRAPHCR2:
+    graphcr2::graphcr2(argc, argv);
+    break;
+  case TOPO_GRAPHMAP1:
+    graphmap1::graphmap1(argc, argv);
+    break;
+  case TOPO_NEIGHB_COLL:
+    neighb_coll::neighb_coll(argc, argv);
+    break;
+  case TOPO_TOPODUP:
+    topodup::topodup(argc, argv);
+    break;
+  case TOPO_TOPOTEST:
+    topotest::topotest(argc, argv);
+    break;
+    */
+
+//   case RMA_ACCFENCE1:
+//     accfence1::accfence1(argc, argv);
+//     break;
+//   case RMA_ACCFENCE2_AM:
+//     accfence2_am::accfence2_am(argc, argv);
+//     break;
+//   case RMA_ACCFENCE2:
+//     accfence2::accfence2(argc, argv);
+//     break;
+//   case RMA_ALLOCMEM:
+//     allocmem::allocmem(argc, argv);
+//     break;
+//   case RMA_ATTRORDERWIN:
+//     attrorderwin::attorderwin(argc, argv);
+//     break;
+//   case RMA_BASEATTRWIN:
+//     baseattrwin::baseattrwin(argc, argv);
+//     break;
+//   case RMA_CONTIG_DISPL:
+//     contig_displ::contig_displ(argc, argv);
+//     break;
+//   case RMA_FETCHANDADD_AM:
+//     fetchandadd_am::fetchandadd_am(argc, argv);
+//     break;
+//   case RMA_FETCHANDADD_TREE_AM:
+//     fetchandadd_tree_am::fetchandadd_tree_am(argc, argv);
+//     break;
+//   case RMA_FETCHANDADD_TREE:
+//     fetchandadd_tree::fetchandadd_tree(argc, argv);
+//     break;
+//   case RMA_FETCHANDADD:
+//     fetchandadd::fetchandadd(argc, argv);
+//     break;
+//   case RMA_FKEYVALWIN:
+//     fkeyvalwin::fkeyvalwin(argc, argv);
+//     break;
+//   case RMA_GETFENCE1:
+//     getfence1::getfence1(argc, argv);
+//     break;
+//   case RMA_GETGROUP:
+//     getgroup::getgroup(argc, argv);
+//     break;
+//   case RMA_IRCPI:
+//     ircpi::ircpi(argc, argv);
+//     break;
+//   case RMA_LOCKCONTENTION:
+//     lockcontention::lockcontention(argc, argv);
+//     break;
+//   case RMA_LOCKNULL:
+//     locknull::locknull(argc, argv);
+//     break;
+//   case RMA_MIXEDSYNC:
+//     mixedsync::mixedsync(argc, argv);
+//     break;
+//   case RMA_NULLPSCW:
+//     nullpscw::nullpscw(argc, argv);
+//     break;
+//   case RMA_PUTFENCE1:
+//     putfence1::putfence1(argc, argv);
+//     break;
+//   case RMA_PUTFIDX:
+//     putfidx::putfidx(argc, argv);
+//     break;
+//   case RMA_PUTPSCW1:
+//     putpscw1::putpscw1(argc, argv);
+//     break;
+//   case RMA_SELFRMA:
+//     selfrma::selfrma(argc, argv);
+//     break;
+//   case RMA_TEST1_AM:
+//     test1_am::test1_am(argc, argv);
+//     break;
+//   case RMA_TEST1:
+//     test1::test1(argc, argv);
+//     break;
+//   case RMA_TEST2_AM:
+//     test2_am::test2_am(argc, argv);
+//     break;
+//   case RMA_TEST2:
+//     test2::test2(argc, argv);
+//     break;
+//   case RMA_TEST3_AM:
+//     test3_am::test3_am(argc, argv);
+//     break;
+//   case RMA_TEST3:
+//     test3::test3(argc, argv);
+//     break;
+//   case RMA_TEST4_AM:
+//     test4_am::test4_am(argc, argv);
+//     break;
+//   case RMA_TEST4:
+//     test4::test4(argc, argv);
+//     break;
+//   case RMA_TEST5_AM:
+//     test5_am::test5_am(argc, argv);
+//     break;
+//   case RMA_TEST5:
+//     test5::test5(argc, argv);
+//     break;
+//   case RMA_TRANSPOSE1:
+//     transpose1::transpose1(argc, argv);
+//     break;
+//   case RMA_TRANSPOSE2:
+//     transpose2::transpose2(argc, argv);
+//     break;
+//   case RMA_TRANSPOSE3:
+//     transpose3::transpose3(argc, argv);
+//     break;
+//   case RMA_TRANSPOSE4:
+//     transpose4::transpose4(argc, argv);
+//     break;
+//   case RMA_TRANSPOSE5:
+//     transpose5::transpose5(argc, argv);
+//     break;
+//   case RMA_TRANSPOSE6:
+//     transpose6::transpose6(argc, argv);
+//     break;
+//   case RMA_TRANSPOSE7:
+//     transpose7::transpose7(argc, argv);
+//     break;
+//   case RMA_WINCALL:
+//     wincall::wincall(argc, argv);
+//     break;
+//   case RMA_WINNAME:
+//     winname::winname(argc, argv);
+//     break;
+  case RMA_RACCUMULATE:
+    raccumulate::raccumulate(argc, argv);
+    break; 
+  case RMA_ACCUMULATE:
+    accumulate::accumulate(argc, argv);
+    break; 
+  case RMA_ALLOCATE:
+    win_alloc::win_alloc(argc, argv);
+    break; 
+  case RMA_RGET:
+    rget::rget(argc, argv);
+    break; 
+  case RMA_GET:
+    get::get(argc, argv);
+    break; 
+  case RMA_RPUT:
+    rput::rput(argc, argv);
+    break; 
+  case RMA_PUT:
+    put::put(argc, argv);
+    break; 
+  case RMA_WIN_CREATE_FREE:
+    win_create_free::win_create_free(argc, argv);
+    break; 
+  case RMA_WIN_FENCE:
+    win_fence::win_fence(argc, argv);
+    break; 
+  case RMA_WIN_LOCK_UNLOCK_ALL:
+    win_lock_unlock_all::win_lock_unlock_all(argc, argv);
+    break; 
+>>>>>>> 27a825a549968bc9e29188f50edca09ea2e7cd68
 
     default:
       spkt_throw_printf(sprockit::spkt_error, "testmpi: unknown test mode %d",
