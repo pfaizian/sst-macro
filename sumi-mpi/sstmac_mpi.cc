@@ -273,14 +273,48 @@ extern "C" int sstmac_comm_create_group(MPI_Comm comm, MPI_Group group, int tag,
 
 extern "C" int sstmac_win_create(void *base, MPI_Aint size, int disp_unit, MPI_Info info,
                                      MPI_Comm comm, MPI_Win *win){
+extern "C" int sstmac_win_create(void *base, MPI_Aint size, int disp_unit,
+                                 MPI_Info info, MPI_Comm comm, MPI_Win *win) {
   return sumi::sstmac_mpi()->win_create(base, size, disp_unit, info, comm, win);
 }
 
 extern "C" int sstmac_win_free(MPI_Win *win){
+extern "C" int sstmac_win_free(MPI_Win *win) {
   return sumi::sstmac_mpi()->win_free(win);
 }
 
 extern "C" int sstmac_win_lock(int lock_type, int rank, int assert, MPI_Win win){
+extern "C" int sstmac_win_fence(int lock_type, int rank, int assert,
+                                MPI_Win *win) {
+  return sumi::sstmac_mpi()->win_fence(lock_type, rank, assert, win);
+}
+
+extern "C" int sstmac_accumulate(void *origin, int origin_count,
+                                 MPI_Datatype origin_datatype, int target_rank,
+                                 MPI_Aint target_disp, int target_count,
+                                 MPI_Datatype target_datatype, MPI_Op op,
+                                 MPI_Win win) {
+  return sumi::sstmac_mpi()->accumulate(origin, origin_count, origin_datatype,
+                                        target_rank, target_disp, target_count,
+                                        target_datatype, op, win);
+}
+
+extern "C" int sstmac_alloc_mem(MPI_Aint size, MPI_Info info, void *baseptr) {
+  return sumi::sstmac_mpi()->alloc_mem(size, info, baseptr);
+}
+
+extern "C" int sstmac_win_set_name(MPI_Win win, const char *win_name) {
+  return sumi::sstmac_mpi()->win_set_name(win, win_name);
+}
+
+extern "C" int sstmac_win_get_name(MPI_Win win, char *win_name,
+                                   int *resultlen) {
+  return sumi::sstmac_mpi()->win_get_name(win, win_name, resultlen);
+}
+
+extern "C" int sstmac_free_mem(void *baseptr) {
+  return sumi::sstmac_mpi()->free_mem(baseptr);
+}
   return sumi::sstmac_mpi()->win_lock(lock_type, rank, assert, win);
 }
 
@@ -304,6 +338,43 @@ extern "C" int sstmac_mpi_put(const void *origin_addr, int origin_count, MPI_Dat
 }
 
 extern "C" int sstmac_group_range_incl(MPI_Group group, int n, int ranges[][3], MPI_Group *newgroup){
+extern "C" int sstmac_win_create_keyval(
+    MPI_Win_copy_attr_function *win_copy_attr_fn,
+    MPI_Win_delete_attr_function *win_delete_attr_fn, int *win_keyval,
+    void *extra_state) {
+  return sumi::sstmac_mpi()->win_create_keyval(
+      win_copy_attr_fn, win_delete_attr_fn, win_keyval, extra_state);
+}
+
+extern "C" int sstmac_win_free_keyval(int *win_keyval) {
+  return sumi::sstmac_mpi()->win_free_keyval(win_keyval);
+}
+
+extern "C" int sstmac_info_set(MPI_Info *info, char *key, char *value) {
+  return sumi::sstmac_mpi()->info_set(info, key, value);
+}
+
+extern "C" int sstmac_info_create(MPI_Info *info) {
+  return sumi::sstmac_mpi()->info_create(info);
+}
+
+extern "C" int sstmac_info_free(MPI_Info *info) {
+  return sumi::sstmac_mpi()->info_free(info);
+}
+
+extern "C" int sstmac_win_delete_attr(MPI_Win win, int win_keyval) {
+  return sumi::sstmac_mpi()->win_delete_attr(win, win_keyval);
+}
+
+extern "C" int sstmac_win_set_attr(MPI_Win win, int win_keyval,
+                                   void *attribute_val) {
+  return sumi::sstmac_mpi()->win_set_attr(win, win_keyval, attribute_val);
+}
+
+extern "C" int sstmac_win_get_attr(MPI_Win win, int win_keyval,
+                                   void *attribute_val, int *flag) {
+  return sumi::sstmac_mpi()->win_get_attr(win, win_keyval, attribute_val, flag);
+}
   return sumi::sstmac_mpi()->group_range_incl(group, n, ranges, newgroup);
 }
 

@@ -12,7 +12,7 @@
 
 /* same as test5.c but uses alloc_mem */
 
-#define SIZE 2000
+#define TEST5_AM_SIZE 2000
 
 namespace test5_am {
 int test5_am(int argc, char *argv[])
@@ -35,44 +35,44 @@ int test5_am(int argc, char *argv[])
     MPI_Comm_split(MPI_COMM_WORLD, (rank < 2), rank, &CommDeuce);
 
     if (rank < 2) {
-        i = MPI_Alloc_mem(SIZE * sizeof(int), MPI_INFO_NULL, &A);
+        i = MPI_Alloc_mem(TEST5_AM_SIZE * sizeof(int), MPI_INFO_NULL, &A);
         if (i) {
             printf("Can't allocate memory in test program\n");
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
-        i = MPI_Alloc_mem(SIZE * sizeof(int), MPI_INFO_NULL, &B);
+        i = MPI_Alloc_mem(TEST5_AM_SIZE * sizeof(int), MPI_INFO_NULL, &B);
         if (i) {
             printf("Can't allocate memory in test program\n");
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
 
         if (rank == 0) {
-            for (i = 0; i < SIZE; i++)
+            for (i = 0; i < TEST5_AM_SIZE; i++)
                 B[i] = 500 + i;
-            MPI_Win_create(B, SIZE * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce, &win);
+            MPI_Win_create(B, TEST5_AM_SIZE * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce, &win);
             MPI_Win_fence(0, win);
-            for (i = 0; i < SIZE; i++) {
+            for (i = 0; i < TEST5_AM_SIZE; i++) {
                 A[i] = i + 100;
                 MPI_Get(&A[i], 1, MPI_INT, 1, i, 1, MPI_INT, win);
             }
             MPI_Win_fence(0, win);
-            for (i = 0; i < SIZE; i++)
+            for (i = 0; i < TEST5_AM_SIZE; i++)
                 if (A[i] != 1000 + i) {
                     SQUELCH(printf("Rank 0: A[%d] is %d, should be %d\n", i, A[i], 1000 + i););
                     errs++;
                 }
         }
         if (rank == 1) {
-            for (i = 0; i < SIZE; i++)
+            for (i = 0; i < TEST5_AM_SIZE; i++)
                 A[i] = 1000 + i;
-            MPI_Win_create(A, SIZE * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce, &win);
+            MPI_Win_create(A, TEST5_AM_SIZE * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce, &win);
             MPI_Win_fence(0, win);
-            for (i = 0; i < SIZE; i++) {
+            for (i = 0; i < TEST5_AM_SIZE; i++) {
                 B[i] = i + 200;
                 MPI_Get(&B[i], 1, MPI_INT, 0, i, 1, MPI_INT, win);
             }
             MPI_Win_fence(0, win);
-            for (i = 0; i < SIZE; i++)
+            for (i = 0; i < TEST5_AM_SIZE; i++)
                 if (B[i] != 500 + i) {
                     SQUELCH(printf("Rank 1: B[%d] is %d, should be %d\n", i, B[i], 500 + i););
                     errs++;

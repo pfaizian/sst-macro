@@ -104,11 +104,9 @@ int MTestGetComm( MPI_Comm *, int );
 const char *MTestGetIntracommName( void );
 void MTestFreeComm( MPI_Comm * );
 
-#ifdef HAVE_MPI_WIN_CREATE
 int MTestGetWin( MPI_Win *, int );
 const char *MTestGetWinName( void );
 void MTestFreeWin( MPI_Win * );
-#endif
 
 /* These macros permit overrides via:
  *     make CPPFLAGS='-DMTEST_MPI_VERSION=X -DMTEST_MPI_SUBVERSION=Y'

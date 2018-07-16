@@ -207,6 +207,20 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #define MPI_Get sstmac_mpi_get
 #define MPI_Put sstmac_mpi_put
+#define MPI_Accumulate sstmac_accumulate
+#define MPI_Win_fence sstmac_win_fence
+#define MPI_Alloc_mem sstmac_alloc_mem
+#define MPI_Free_mem sstmac_free_mem
+#define MPI_Win_get_name sstmac_win_get_name
+#define MPI_Win_set_name sstmac_win_set_name
+#define MPI_Win_create_keyval sstmac_win_create_keyval
+#define MPI_Win_free_keyval sstmac_win_free_keyval
+#define MPI_Win_delete_attr sstmac_win_delete_attr
+#define MPI_Win_set_attr sstmac_win_set_attr
+#define MPI_Win_get_attr sstmac_win_get_attr
+#define MPI_Info_create sstmac_info_create
+#define MPI_Info_set sstmac_info_set
+#define MPI_Info_free sstmac_info_free
 
 #define MPI_Intercomm_create error not yet implemented
 #define MPI_Comm_remote_size error not yet implemented
@@ -238,9 +252,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #define MPI_Open_port error not yet implemented
 #define MPI_Publish_name error not yet implemented
 #define MPI_Unpublish_name error not yet implemented
-#define MPI_Accumulate error not yet implemented
 #define MPI_Win_complete error not yet implemented
-#define MPI_Win_fence error not yet implemented
 #define MPI_Win_get_group error not yet implemented
 #define MPI_Win_post error not yet implemented
 #define MPI_Win_start error not yet implemented
@@ -272,31 +284,19 @@ Questions? Contact sst-macro-help@sandia.gov
 #define MPI_Type_set_attr error not yet implemented
 #define MPI_Type_match_size error not yet implemented
 #define MPI_Win_call_errhandler error not yet implemented
-#define MPI_Win_create_keyval error not yet implemented
-#define MPI_Win_delete_attr error not yet implemented
-#define MPI_Win_free_keyval error not yet implemented
-#define MPI_Win_get_attr error not yet implemented
-#define MPI_Win_get_name error not yet implemented
-#define MPI_Win_set_attr error not yet implemented
-#define MPI_Win_set_name error not yet implemented
 #define MPI_File_c2f error not yet implemented
-#define MPI_Alloc_mem error not yet implemented
 #define MPI_Comm_create_errhandler error not yet implemented
 #define MPI_Comm_get_errhandler error not yet implemented
 
 #define MPI_File_create_errhandler error not yet implemented
 #define MPI_File_get_errhandler error not yet implemented
 #define MPI_File_set_errhandler error not yet implemented
-#define MPI_Free_mem error not yet implemented
-#define MPI_Info_create error not yet implemented
 #define MPI_Info_delete error not yet implemented
 #define MPI_Info_dup error not yet implemented
-#define MPI_Info_free error not yet implemented
 #define MPI_Info_get error not yet implemented
 #define MPI_Info_get_nkeys error not yet implemented
 #define MPI_Info_get_nthkey error not yet implemented
 #define MPI_Info_get_valuelen error not yet implemented
-#define MPI_Info_set error not yet implemented
 #define MPI_Pack_external error not yet implemented
 #define MPI_Pack_external_size error not yet implemented
 #define MPI_Request_get_status error not yet implemented

@@ -535,9 +535,13 @@ class mpi_api :
 
   int win_free(MPI_Win *win);
 
+  int win_fence(int lock_type, int rank, int assert, MPI_Win *win);
+
   int win_lock(int lock_type, int rank, int assert, MPI_Win win);
 
   int win_unlock(int rank, MPI_Win win);
+  int win_set_name(MPI_Win win, const char *win_name);
+  int win_get_name(MPI_Win win, char *win_name, int *resultlen);
 
   int get(void *origin_addr, int origin_count, MPI_Datatype
               origin_datatype, int target_rank, MPI_Aint target_disp,
@@ -546,6 +550,25 @@ class mpi_api :
   int put(const void *origin_addr, int origin_count, MPI_Datatype
               origin_datatype, int target_rank, MPI_Aint target_disp,
               int target_count, MPI_Datatype target_datatype, MPI_Win win);
+
+  int accumulate(void *origin, int origin_count,
+    MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int
+    target_count, MPI_Datatype target_datatype, MPI_Op op, MPI_Win win);
+
+  int alloc_mem(MPI_Aint size, MPI_Info info, void *baseptr);
+  int free_mem(void *baseptr);
+
+  int win_create_keyval(MPI_Win_copy_attr_function *win_copy_attr_fn,
+                               MPI_Win_delete_attr_function *win_delete_attr_fn,
+                               int *win_keyval, void *extra_state);
+  int win_free_keyval(int *win_keyval);
+  int info_free(MPI_Info *info);
+  int info_create(MPI_Info *info);
+  int info_set(MPI_Info *info, char* key, char *value);
+
+  int win_delete_attr(MPI_Win win, int win_keyval);
+  int win_set_attr(MPI_Win win, int win_keyval, void *attribute_val);
+  int win_get_attr(MPI_Win win, int win_keyval, void *attribute_val, int *flag);
 
  public:
   int op_create(MPI_User_function* user_fn, int commute, MPI_Op* op);

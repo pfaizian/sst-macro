@@ -630,43 +630,47 @@ enum TEST_MODE {
 #include "rma/accfence2.cc"
 #include "rma/accfence2_am.cc"
 #include "rma/allocmem.cc"
-#include "rma/attrorderwin.cc"
-#include "rma/baseattrwin.cc"
-#include "rma/contig_displ.cc"
+#include "rma/attrorderwin.cc" // don't want to implement keyval
+#include "rma/baseattrwin.cc" // don't want to implement get_attr
+// #include "rma/contig_displ.cc" // don't want to implement create_indexed_block
 #include "rma/fetchandadd.cc"
 #include "rma/fetchandadd_am.cc"
-#include "rma/fetchandadd_tree.cc"
-#include "rma/fetchandadd_tree_am.cc"
-#include "rma/fkeyvalwin.cc"
+// #include "rma/fetchandadd_tree.cc" // don't want to implement create_indexed_block
+// #include "rma/fetchandadd_tree_am.cc" // don't want to implement create_indexed_block
+#include "rma/fkeyvalwin.cc" // don't want to implement keyval
 // #include "rma/getfence1.cc" // contains dtpools.h
-#include "rma/getgroup.cc"
-#include "rma/ircpi.cc"
+// #include "rma/getgroup.cc" // don't want to implement get_group
+// #include "rma/ircpi.cc" // not in the mpich code I ported
 #include "rma/lockcontention.cc"
 #include "rma/locknull.cc"
 #include "rma/mixedsync.cc"
-#include "rma/nullpscw.cc"
+// #include "rma/nullpscw.cc" // don't want to implement get_group
 // #include "rma/putfence1.cc" // contains dtpools.h
-#include "rma/putfidx.cc"
-#include "rma/putpscw1.cc"
+// #include "rma/putfidx.cc" // don't want to implement set_errhandler
+// #include "rma/putpscw1.cc" // don't want to implement get_group
 #include "rma/selfrma.cc"
 #include "rma/test1.cc"
 #include "rma/test1_am.cc"
-#include "rma/test2.cc"
-#include "rma/test2_am.cc"
-#include "rma/test3.cc"
-#include "rma/test3_am.cc"
+
+// TODO the following require active one-sided which is not the current
+// implementation target, but might eventually be supported
+// #include "rma/test2.cc" 
+// #include "rma/test2_am.cc"
+// #include "rma/test3.cc"
+// #include "rma/test3_am.cc"
+// #include "rma/transpose3.cc"
+//
 #include "rma/test4.cc"
 #include "rma/test4_am.cc"
 #include "rma/test5.cc"
 #include "rma/test5_am.cc"
 #include "rma/transpose1.cc"
 #include "rma/transpose2.cc"
-#include "rma/transpose3.cc"
 #include "rma/transpose4.cc"
 #include "rma/transpose5.cc"
 #include "rma/transpose6.cc"
 #include "rma/transpose7.cc"
-#include "rma/wincall.cc"
+// #include "rma/wincall.cc" // don't want to implement set_errhandler
 #include "rma/winname.cc"
 
 int testmode_ = -1;
@@ -1407,12 +1411,10 @@ int USER_MAIN(int argc, char* argv[]) {
         break;
       case TOPO_TOPOTEST:
         topotest::topotest(argc, argv);
-        break;
-        */
-
-    case RMA_ACCFENCE1:
-      accfence1::accfence1(argc, argv);
-      break;
+        break; */
+    // case RMA_ACCFENCE1:
+    //   accfence1::accfence1(argc, argv);
+    //   break;
     case RMA_ACCFENCE2_AM:
       accfence2_am::accfence2_am(argc, argv);
       break;
@@ -1422,39 +1424,30 @@ int USER_MAIN(int argc, char* argv[]) {
     case RMA_ALLOCMEM:
       allocmem::allocmem(argc, argv);
       break;
-    case RMA_ATTRORDERWIN:
-      attrorderwin::attorderwin(argc, argv);
-      break;
-    case RMA_BASEATTRWIN:
-      baseattrwin::baseattrwin(argc, argv);
-      break;
-    case RMA_CONTIG_DISPL:
-      contig_displ::contig_displ(argc, argv);
-      break;
     case RMA_FETCHANDADD_AM:
       fetchandadd_am::fetchandadd_am(argc, argv);
       break;
-    case RMA_FETCHANDADD_TREE_AM:
-      fetchandadd_tree_am::fetchandadd_tree_am(argc, argv);
-      break;
-    case RMA_FETCHANDADD_TREE:
-      fetchandadd_tree::fetchandadd_tree(argc, argv);
-      break;
+    // case RMA_FETCHANDADD_TREE_AM:
+    //   fetchandadd_tree_am::fetchandadd_tree_am(argc, argv);
+    //   break;
+    // case RMA_FETCHANDADD_TREE:
+    //   fetchandadd_tree::fetchandadd_tree(argc, argv);
+    //   break;
     case RMA_FETCHANDADD:
       fetchandadd::fetchandadd(argc, argv);
       break;
-    case RMA_FKEYVALWIN:
-      fkeyvalwin::fkeyvalwin(argc, argv);
-      break;
-    case RMA_GETFENCE1:
-      getfence1::getfence1(argc, argv);
-      break;
-    case RMA_GETGROUP:
-      getgroup::getgroup(argc, argv);
-      break;
-    case RMA_IRCPI:
-      ircpi::ircpi(argc, argv);
-      break;
+    // case RMA_FKEYVALWIN:
+    //   fkeyvalwin::fkeyvalwin(argc, argv);
+    //   break;
+    // case RMA_GETFENCE1:
+    //   getfence1::getfence1(argc, argv);
+    //   break;
+    // case RMA_GETGROUP:
+    //   getgroup::getgroup(argc, argv);
+    //   break;
+    // case RMA_IRCPI:
+    //   ircpi::ircpi(argc, argv);
+    //   break;
     case RMA_LOCKCONTENTION:
       lockcontention::lockcontention(argc, argv);
       break;
@@ -1464,18 +1457,18 @@ int USER_MAIN(int argc, char* argv[]) {
     case RMA_MIXEDSYNC:
       mixedsync::mixedsync(argc, argv);
       break;
-    case RMA_NULLPSCW:
-      nullpscw::nullpscw(argc, argv);
-      break;
-    case RMA_PUTFENCE1:
-      putfence1::putfence1(argc, argv);
-      break;
-    case RMA_PUTFIDX:
-      putfidx::putfidx(argc, argv);
-      break;
-    case RMA_PUTPSCW1:
-      putpscw1::putpscw1(argc, argv);
-      break;
+    // case RMA_NULLPSCW:
+    //   nullpscw::nullpscw(argc, argv);
+    //   break;
+    // case RMA_PUTFENCE1:
+    //   putfence1::putfence1(argc, argv);
+    //   break;
+    // case RMA_PUTFIDX:
+    //   putfidx::putfidx(argc, argv);
+    //   break;
+    // case RMA_PUTPSCW1:
+    //   putpscw1::putpscw1(argc, argv);
+    //   break;
     case RMA_SELFRMA:
       selfrma::selfrma(argc, argv);
       break;
@@ -1485,18 +1478,18 @@ int USER_MAIN(int argc, char* argv[]) {
     case RMA_TEST1:
       test1::test1(argc, argv);
       break;
-    case RMA_TEST2_AM:
-      test2_am::test2_am(argc, argv);
-      break;
-    case RMA_TEST2:
-      test2::test2(argc, argv);
-      break;
-    case RMA_TEST3_AM:
-      test3_am::test3_am(argc, argv);
-      break;
-    case RMA_TEST3:
-      test3::test3(argc, argv);
-      break;
+    // case RMA_TEST2_AM:
+    //   test2_am::test2_am(argc, argv);
+    //   break;
+    // case RMA_TEST2:
+    //   test2::test2(argc, argv);
+    //   break;
+    // case RMA_TEST3_AM:
+    //   test3_am::test3_am(argc, argv);
+    //   break;
+    // case RMA_TEST3:
+    //   test3::test3(argc, argv);
+    //   break;
     case RMA_TEST4_AM:
       test4_am::test4_am(argc, argv);
       break;
@@ -1515,9 +1508,9 @@ int USER_MAIN(int argc, char* argv[]) {
     case RMA_TRANSPOSE2:
       transpose2::transpose2(argc, argv);
       break;
-    case RMA_TRANSPOSE3:
-      transpose3::transpose3(argc, argv);
-      break;
+    // case RMA_TRANSPOSE3:
+    //   transpose3::transpose3(argc, argv);
+    //   break;
     case RMA_TRANSPOSE4:
       transpose4::transpose4(argc, argv);
       break;
@@ -1530,9 +1523,9 @@ int USER_MAIN(int argc, char* argv[]) {
     case RMA_TRANSPOSE7:
       transpose7::transpose7(argc, argv);
       break;
-    case RMA_WINCALL:
-      wincall::wincall(argc, argv);
-      break;
+    // case RMA_WINCALL:
+    //   wincall::wincall(argc, argv);
+    //   break;
     case RMA_WINNAME:
       winname::winname(argc, argv);
       break;

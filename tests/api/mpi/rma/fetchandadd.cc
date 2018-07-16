@@ -12,19 +12,19 @@
    Fig. 6.12). */
 
 
-#define NTIMES 20       /* no of times each process calls the counter
+#define FETCHANDADD_NTIMES 20       /* no of times each process calls the counter
                          * routine */
 
+
+
+
+namespace fetchandadd {
+void Get_nextval(MPI_Win win, int *val_array, MPI_Datatype get_type,
+                 int rank, int nprocs, int *value);
+int compar(const void *a, const void *b);
 int localvalue = 0;             /* contribution of this process to the counter. We
                                  * define it as a global variable because attribute
                                  * caching on the window is not enabled yet. */
-
-void Get_nextval(MPI_Win win, int *val_array, MPI_Datatype get_type,
-                 int rank, int nprocs, int *value);
-
-int compar(const void *a, const void *b);
-
-namespace fetchandadd {
 int fetchandadd(int argc, char *argv[])
 {
     int rank, nprocs, i, blens[2], disps[2], *counter_mem, *val_array, *results, *counter_vals;
@@ -48,15 +48,15 @@ int fetchandadd(int argc, char *argv[])
         /* gather the results from other processes, sort them, and check
          * whether they represent a counter being incremented by 1 */
 
-        results = (int *) malloc(NTIMES * nprocs * sizeof(int));
-        for (i = 0; i < NTIMES * nprocs; i++)
+        results = (int *) malloc(FETCHANDADD_NTIMES * nprocs * sizeof(int));
+        for (i = 0; i < FETCHANDADD_NTIMES * nprocs; i++)
             results[i] = -1;
 
-        MPI_Gather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, results, NTIMES, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, results, FETCHANDADD_NTIMES, MPI_INT, 0, MPI_COMM_WORLD);
 
-        qsort(results + NTIMES, NTIMES * (nprocs - 1), sizeof(int), compar);
+        qsort(results + FETCHANDADD_NTIMES, FETCHANDADD_NTIMES * (nprocs - 1), sizeof(int), compar);
 
-        for (i = NTIMES + 1; i < (NTIMES * nprocs); i++)
+        for (i = FETCHANDADD_NTIMES + 1; i < (FETCHANDADD_NTIMES * nprocs); i++)
             if (results[i] != results[i - 1] + 1)
                 errs++;
 
@@ -74,11 +74,11 @@ int fetchandadd(int argc, char *argv[])
 
         /* allocate array to store the values obtained from the
          * fetch-and-add counter */
-        counter_vals = (int *) malloc(NTIMES * sizeof(int));
+        counter_vals = (int *) malloc(FETCHANDADD_NTIMES * sizeof(int));
 
         MPI_Win_create(NULL, 0, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &win);
 
-        for (i = 0; i < NTIMES; i++) {
+        for (i = 0; i < FETCHANDADD_NTIMES; i++) {
             Get_nextval(win, val_array, get_type, rank, nprocs, counter_vals + i);
             /* printf("Rank %d, counter %d\n", rank, value); */
         }
@@ -89,7 +89,7 @@ int fetchandadd(int argc, char *argv[])
         MPI_Type_free(&get_type);
 
         /* gather the results to the root */
-        MPI_Gather(counter_vals, NTIMES, MPI_INT, NULL, 0, MPI_DATATYPE_NULL, 0, MPI_COMM_WORLD);
+        MPI_Gather(counter_vals, FETCHANDADD_NTIMES, MPI_INT, NULL, 0, MPI_DATATYPE_NULL, 0, MPI_COMM_WORLD);
         free(counter_vals);
     }
 

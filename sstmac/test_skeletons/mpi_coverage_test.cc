@@ -62,7 +62,7 @@ static void test_rootv_collectives(MPI_Comm comm);
 static void test_allv_collectives(MPI_Comm comm);
 
 #define finish_test() \
-  if (rank==0) printf("Rank %d on MPI_Comm %ld passed test: %8.2e\n", rank, comm, MPI_Wtime());
+  if (rank==0) printf("Rank %d on MPI_Comm %i passed test: %8.2e\n", rank, comm, MPI_Wtime());
 
 static void test_all(MPI_Comm comm)
 {

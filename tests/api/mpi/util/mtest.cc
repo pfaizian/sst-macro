@@ -1387,3 +1387,145 @@ MTestResourceSummary(FILE *fp)
   }
 #endif
 }
+
+static int win_index = 0;
+static const char *winName;
+/* Use an attribute to remember the type of memory allocation (static,
+   malloc, or MPI_Alloc_mem) */
+static int mem_keyval = MPI_KEYVAL_INVALID;
+int MTestGetWin(MPI_Win * win, int mustBePassive)
+{
+    static char actbuf[1024];
+    static char *pasbuf;
+    char *buf;
+    int n, rank, merr;
+    MPI_Info info;
+
+    if (mem_keyval == MPI_KEYVAL_INVALID) {
+        /* Create the keyval */
+        merr = MPI_Win_create_keyval(MPI_WIN_NULL_COPY_FN, MPI_WIN_NULL_DELETE_FN, &mem_keyval, 0);
+        if (merr)
+            MTestPrintError(merr);
+    }
+
+    switch (win_index) {
+        case 0:
+            /* Active target window */
+            merr = MPI_Win_create(actbuf, 1024, 1, MPI_INFO_NULL, MPI_COMM_WORLD, win);
+            if (merr)
+                MTestPrintError(merr);
+            winName = "active-window";
+            merr = MPI_Win_set_attr(*win, mem_keyval, (void *) 0);
+            if (merr)
+                MTestPrintError(merr);
+            break;
+        case 1:
+            /* Passive target window */
+            merr = MPI_Alloc_mem(1024, MPI_INFO_NULL, &pasbuf);
+            if (merr)
+                MTestPrintError(merr);
+            merr = MPI_Win_create(pasbuf, 1024, 1, MPI_INFO_NULL, MPI_COMM_WORLD, win);
+            if (merr)
+                MTestPrintError(merr);
+            winName = "passive-window";
+            merr = MPI_Win_set_attr(*win, mem_keyval, (void *) 2);
+            if (merr)
+                MTestPrintError(merr);
+            break;
+        case 2:
+            /* Active target; all windows different sizes */
+            merr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+            if (merr)
+                MTestPrintError(merr);
+            n = rank * 64;
+            if (n)
+                buf = (char *) malloc(n);
+            else
+                buf = 0;
+            merr = MPI_Win_create(buf, n, 1, MPI_INFO_NULL, MPI_COMM_WORLD, win);
+            if (merr)
+                MTestPrintError(merr);
+            winName = "active-all-different-win";
+            merr = MPI_Win_set_attr(*win, mem_keyval, (void *) 1);
+            if (merr)
+                MTestPrintError(merr);
+            break;
+        case 3:
+            /* Active target, no locks set */
+            merr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+            if (merr)
+                MTestPrintError(merr);
+            n = rank * 64;
+            if (n)
+                buf = (char *) malloc(n);
+            else
+                buf = 0;
+            merr = MPI_Info_create(&info);
+            if (merr)
+                MTestPrintError(merr);
+            merr = MPI_Info_set(info, (char *) "nolocks", (char *) "true");
+            if (merr)
+                MTestPrintError(merr);
+            merr = MPI_Win_create(buf, n, 1, info, MPI_COMM_WORLD, win);
+            if (merr)
+                MTestPrintError(merr);
+            merr = MPI_Info_free(&info);
+            if (merr)
+                MTestPrintError(merr);
+            winName = "active-nolocks-all-different-win";
+            merr = MPI_Win_set_attr(*win, mem_keyval, (void *) 1);
+            if (merr)
+                MTestPrintError(merr);
+            break;
+        default:
+            win_index = -1;
+    }
+    win_index++;
+    return win_index;
+}
+
+/* Return a pointer to the name associated with a window object */
+const char *MTestGetWinName(void)
+{
+    return winName;
+}
+
+/* Free the storage associated with a window object */
+void MTestFreeWin(MPI_Win * win)
+{
+    void *addr;
+    int flag, merr;
+
+    merr = MPI_Win_get_attr(*win, MPI_WIN_BASE, &addr, &flag);
+    if (merr)
+        MTestPrintError(merr);
+    if (!flag) {
+        MTestError("Could not get WIN_BASE from window");
+    }
+    if (addr) {
+        void *val;
+        merr = MPI_Win_get_attr(*win, mem_keyval, &val, &flag);
+        if (merr)
+            MTestPrintError(merr);
+        if (flag) {
+            if (val == (void *) 1) {
+                free(addr);
+            } else if (val == (void *) 2) {
+                merr = MPI_Free_mem(addr);
+                if (merr)
+                    MTestPrintError(merr);
+            }
+            /* if val == (void *)0, then static data that must not be freed */
+        }
+    }
+    merr = MPI_Win_free(win);
+    if (merr)
+        MTestPrintError(merr);
+}
+
+static void MTestRMACleanup(void)
+{
+    if (mem_keyval != MPI_KEYVAL_INVALID) {
+        MPI_Win_free_keyval(&mem_keyval);
+    }
+}

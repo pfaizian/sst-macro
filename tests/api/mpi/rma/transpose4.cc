@@ -11,13 +11,13 @@
    datatypes. Uses  vector and hvector (Example 3.32 from MPI 1.1
    Standard). Run on 2 processes. */
 
-#define NROWS 100
-#define NCOLS 100
+#define TRANSPOSE4_NROWS 100
+#define TRANSPOSE4_NCOLS 100
 
 namespace transpose4 {
 int transpose4(int argc, char *argv[])
 {
-    int rank, nprocs, A[NROWS][NCOLS], i, j;
+    int rank, nprocs, A[TRANSPOSE4_NROWS][TRANSPOSE4_NCOLS], i, j;
     MPI_Comm CommDeuce;
     MPI_Win win;
     MPI_Datatype column, xpose;
@@ -36,21 +36,21 @@ int transpose4(int argc, char *argv[])
 
     if (rank < 2) {
         if (rank == 0) {
-            for (i = 0; i < NROWS; i++)
-                for (j = 0; j < NCOLS; j++)
-                    A[i][j] = i * NCOLS + j;
+            for (i = 0; i < TRANSPOSE4_NROWS; i++)
+                for (j = 0; j < TRANSPOSE4_NCOLS; j++)
+                    A[i][j] = i * TRANSPOSE4_NCOLS + j;
 
             /* create datatype for one column */
-            MPI_Type_vector(NROWS, 1, NCOLS, MPI_INT, &column);
+            MPI_Type_vector(TRANSPOSE4_NROWS, 1, TRANSPOSE4_NCOLS, MPI_INT, &column);
             /* create datatype for matrix in column-major order */
-            MPI_Type_hvector(NCOLS, 1, sizeof(int), column, &xpose);
+            MPI_Type_hvector(TRANSPOSE4_NCOLS, 1, sizeof(int), column, &xpose);
             MPI_Type_commit(&xpose);
 
             MPI_Win_create(NULL, 0, 1, MPI_INFO_NULL, CommDeuce, &win);
 
             MPI_Win_lock(MPI_LOCK_SHARED, 1, 0, win);
 
-            MPI_Put(A, NROWS * NCOLS, MPI_INT, 1, 0, 1, xpose, win);
+            MPI_Put(A, TRANSPOSE4_NROWS * TRANSPOSE4_NCOLS, MPI_INT, 1, 0, 1, xpose, win);
 
             MPI_Type_free(&column);
             MPI_Type_free(&xpose);
@@ -58,18 +58,18 @@ int transpose4(int argc, char *argv[])
             MPI_Win_unlock(1, win);
             MPI_Win_free(&win);
         } else {        /* rank=1 */
-            for (i = 0; i < NROWS; i++)
-                for (j = 0; j < NCOLS; j++)
+            for (i = 0; i < TRANSPOSE4_NROWS; i++)
+                for (j = 0; j < TRANSPOSE4_NCOLS; j++)
                     A[i][j] = -1;
-            MPI_Win_create(A, NROWS * NCOLS * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce,
+            MPI_Win_create(A, TRANSPOSE4_NROWS * TRANSPOSE4_NCOLS * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce,
                            &win);
 
             MPI_Win_free(&win);
 
-            for (j = 0; j < NCOLS; j++)
-                for (i = 0; i < NROWS; i++)
-                    if (A[j][i] != i * NCOLS + j) {
-                        printf("Error: A[%d][%d]=%d should be %d\n", j, i, A[j][i], i * NCOLS + j);
+            for (j = 0; j < TRANSPOSE4_NCOLS; j++)
+                for (i = 0; i < TRANSPOSE4_NROWS; i++)
+                    if (A[j][i] != i * TRANSPOSE4_NCOLS + j) {
+                        printf("Error: A[%d][%d]=%d should be %d\n", j, i, A[j][i], i * TRANSPOSE4_NCOLS + j);
                         errs++;
                     }
         }

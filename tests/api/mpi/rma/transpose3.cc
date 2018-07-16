@@ -12,8 +12,8 @@
    datatypes. Uses  vector and hvector (Example 3.32 from MPI 1.1
    Standard). Run on 2 processes */
 
-#define NROWS 100
-#define NCOLS 100
+#define TRANSPOSE3_NROWS 100
+#define TRANSPOSE3_NCOLS 100
 
 namespace transpose3 {
 int transpose3(int argc, char *argv[])
@@ -40,16 +40,16 @@ int transpose3(int argc, char *argv[])
         MPI_Comm_group(CommDeuce, &comm_group);
 
         if (rank == 0) {
-            int A[NROWS][NCOLS];
+            int A[TRANSPOSE3_NROWS][TRANSPOSE3_NCOLS];
 
-            for (i = 0; i < NROWS; i++)
-                for (j = 0; j < NCOLS; j++)
-                    A[i][j] = i * NCOLS + j;
+            for (i = 0; i < TRANSPOSE3_NROWS; i++)
+                for (j = 0; j < TRANSPOSE3_NCOLS; j++)
+                    A[i][j] = i * TRANSPOSE3_NCOLS + j;
 
             /* create datatype for one column */
-            MPI_Type_vector(NROWS, 1, NCOLS, MPI_INT, &column);
+            MPI_Type_vector(TRANSPOSE3_NROWS, 1, TRANSPOSE3_NCOLS, MPI_INT, &column);
             /* create datatype for matrix in column-major order */
-            MPI_Type_hvector(NCOLS, 1, sizeof(int), column, &xpose);
+            MPI_Type_hvector(TRANSPOSE3_NCOLS, 1, sizeof(int), column, &xpose);
             MPI_Type_commit(&xpose);
 
 #ifdef USE_WIN_ALLOCATE
@@ -63,7 +63,7 @@ int transpose3(int argc, char *argv[])
             MPI_Group_incl(comm_group, 1, &destrank, &group);
             MPI_Win_start(group, 0, win);
 
-            MPI_Put(A, NROWS * NCOLS, MPI_INT, 1, 0, 1, xpose, win);
+            MPI_Put(A, TRANSPOSE3_NROWS * TRANSPOSE3_NCOLS, MPI_INT, 1, 0, 1, xpose, win);
 
             MPI_Type_free(&column);
             MPI_Type_free(&xpose);
@@ -72,17 +72,17 @@ int transpose3(int argc, char *argv[])
         } else {        /* rank=1 */
             int *A;
 #ifdef USE_WIN_ALLOCATE
-            MPI_Win_allocate(NROWS * NCOLS * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce, &A,
+            MPI_Win_allocate(TRANSPOSE3_NROWS * TRANSPOSE3_NCOLS * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce, &A,
                              &win);
 #else
-            MPI_Alloc_mem(NROWS * NCOLS * sizeof(int), MPI_INFO_NULL, &A);
-            MPI_Win_create(A, NROWS * NCOLS * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce,
+            MPI_Alloc_mem(TRANSPOSE3_NROWS * TRANSPOSE3_NCOLS * sizeof(int), MPI_INFO_NULL, &A);
+            MPI_Win_create(A, TRANSPOSE3_NROWS * TRANSPOSE3_NCOLS * sizeof(int), sizeof(int), MPI_INFO_NULL, CommDeuce,
                            &win);
 #endif
             MPI_Win_lock(MPI_LOCK_SHARED, rank, 0, win);
-            for (i = 0; i < NROWS; i++)
-                for (j = 0; j < NCOLS; j++)
-                    A[i * NCOLS + j] = -1;
+            for (i = 0; i < TRANSPOSE3_NROWS; i++)
+                for (j = 0; j < TRANSPOSE3_NCOLS; j++)
+                    A[i * TRANSPOSE3_NCOLS + j] = -1;
             MPI_Win_unlock(rank, win);
 
             destrank = 0;
@@ -90,12 +90,12 @@ int transpose3(int argc, char *argv[])
             MPI_Win_post(group, 0, win);
             MPI_Win_wait(win);
 
-            for (j = 0; j < NCOLS; j++) {
-                for (i = 0; i < NROWS; i++) {
-                    if (A[j * NROWS + i] != i * NCOLS + j) {
+            for (j = 0; j < TRANSPOSE3_NCOLS; j++) {
+                for (i = 0; i < TRANSPOSE3_NROWS; i++) {
+                    if (A[j * TRANSPOSE3_NROWS + i] != i * TRANSPOSE3_NCOLS + j) {
                         if (errs < 50) {
                             SQUELCH(printf("Error: A[%d][%d]=%d should be %d\n", j, i,
-                                           A[j * NROWS + i], i * NCOLS + j););
+                                           A[j * TRANSPOSE3_NROWS + i], i * TRANSPOSE3_NCOLS + j););
                         }
                         errs++;
                     }

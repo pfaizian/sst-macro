@@ -280,10 +280,10 @@ int sstmac_comm_get_info(MPI_Comm comm, MPI_Info *info);
 int sstmac_accumulate(const void *origin_addr, int origin_count, MPI_Datatype origin_datatype,
                    int target_rank, MPI_Aint target_disp, int target_count,
                    MPI_Datatype target_datatype, MPI_Op op, MPI_Win win);
-int sstmac_get(void *origin_addr, int origin_count, MPI_Datatype origin_datatype,
+int sstmac_mpi_get(void *origin_addr, int origin_count, MPI_Datatype origin_datatype,
             int target_rank, MPI_Aint target_disp, int target_count,
             MPI_Datatype target_datatype, MPI_Win win);
-int sstmac_put(const void *origin_addr, int origin_count, MPI_Datatype origin_datatype,
+int sstmac_mpi_put(const void *origin_addr, int origin_count, MPI_Datatype origin_datatype,
             int target_rank, MPI_Aint target_disp, int target_count,
             MPI_Datatype target_datatype, MPI_Win win);
 int sstmac_win_complete(MPI_Win win);

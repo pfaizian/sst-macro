@@ -55,7 +55,9 @@ typedef int32_t MPI_Request;
 typedef long MPI_Op;
 
 typedef uint16_t MPI_Datatype;
-typedef long MPI_Comm;
+// MPI_Comm was a long, but mpich has it as int and it caused conflicts with the
+// RMA copy functions if it was not an int
+typedef int MPI_Comm; 
 #define MPI_COMM_WORLD ((MPI_Comm)0)
 #define MPI_COMM_SELF  ((MPI_Comm)0x44444444)
 
