@@ -626,7 +626,6 @@ enum TEST_MODE {
 */
 
 // -------------- RMA ------------ //
-<<<<<<< HEAD
 // #include "rma/accfence1.cc" // contains dtpools.h
 #include "rma/accfence2.cc"
 #include "rma/accfence2_am.cc"
@@ -673,60 +672,6 @@ enum TEST_MODE {
 #include "rma/transpose7.cc"
 // #include "rma/wincall.cc" // don't want to implement set_errhandler
 #include "rma/winname.cc"
-=======
-// #include "rma/accfence1.cc"
-// #include "rma/accfence2_am.cc"
-// #include "rma/accfence2.cc"
-// #include "rma/allocmem.cc"
-// #include "rma/attrorderwin.cc"
-// #include "rma/baseattrwin.cc"
-// #include "rma/contig_displ.cc"
-// #include "rma/fetchandadd_am.cc"
-// #include "rma/fetchandadd_tree_am.cc"
-// #include "rma/fetchandadd_tree.cc"
-// #include "rma/fetchandadd.cc"
-// #include "rma/fkeyvalwin.cc"
-// #include "rma/getfence1.cc"
-// #include "rma/getgroup.cc"
-// #include "rma/ircpi.cc"
-// #include "rma/lockcontention.cc"
-// #include "rma/locknull.cc"
-// #include "rma/mixedsync.cc"
-// #include "rma/nullpscw.cc"
-// #include "rma/putfence1.cc"
-// #include "rma/putfidx.cc"
-// #include "rma/putpscw1.cc"
-// #include "rma/selfrma.cc"
-// #include "rma/test1_am.cc"
-// #include "rma/test1.cc"
-// #include "rma/test2_am.cc"
-// #include "rma/test2.cc"
-// #include "rma/test3_am.cc"
-// #include "rma/test3.cc"
-// #include "rma/test4_am.cc"
-// #include "rma/test4.cc"
-// #include "rma/test5_am.cc"
-// #include "rma/test5.cc"
-// #include "rma/transpose1.cc"
-// #include "rma/transpose2.cc"
-// #include "rma/transpose3.cc"
-// #include "rma/transpose4.cc"
-// #include "rma/transpose5.cc"
-// #include "rma/transpose6.cc"
-// #include "rma/transpose7.cc"
-// #include "rma/wincall.cc"
-// #include "rma/winname.cc"
-#include "rma/raccumulate.cc"
-#include "rma/accumulate.cc"
-#include "rma/rget.cc"
-#include "rma/get.cc"
-#include "rma/rput.cc"
-#include "rma/put.cc"
-#include "rma/win_alloc.cc"
-#include "rma/win_create_free.cc"
-#include "rma/win_fence.cc"
-#include "rma/win_lock_unlock_all.cc"
->>>>>>> 27a825a549968bc9e29188f50edca09ea2e7cd68
 
 int testmode_ = -1;
 
