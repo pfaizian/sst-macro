@@ -16,14 +16,12 @@ RUN echo "NOTE: 'sstmac_clang' has dynamic links that must be copied to the fina
     cp $libs libs
 
 FROM ubuntu:18.04
-COPY --from=builder /lib64 /lib64
-COPY --from=builder /usr/local/bin/ /bin
-COPY --from=builder /home/build/libs /lib
-
 RUN apt-get update -y && apt-get upgrade -y && apt-get install -y \
     python \
     g++ && \
     rm -rf /var/lib/apt/lists/*
-# Just to show it runs
-#ENTRYPOINT ["/sstmac_clang"]
-#CMD ["-help"]
+
+COPY --from=builder /lib64 /lib64
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
+COPY --from=builder /usr/local/include/ /usr/local/include/
+COPY --from=builder /usr/local/lib /usr/local/lib
