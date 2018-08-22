@@ -43,7 +43,7 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include <sumi/reduce_scatter.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sumi/communicator.h>
 #include <sprockit/output.h>
 #include <sprockit/stl_string.h>
@@ -60,11 +60,13 @@ namespace sumi {
 void
 halving_reduce_scatter_actor::finalize_buffers()
 {
+  sprockit::abort("halving_reduce_scatter: not implemented");
 }
 
 void
 halving_reduce_scatter_actor::init_buffers(void* dst, void* src)
 {
+  sprockit::abort("halving_reduce_scatter: not implemented");
 }
 
 void
@@ -76,11 +78,14 @@ halving_reduce_scatter_actor::init_dag()
 bool
 halving_reduce_scatter_actor::is_lower_partner(int virtual_me, int partner_gap)
 {
+  sprockit::abort("halving_reduce_scatter: not implemented");
+  return false;
 }
 
 void
 halving_reduce_scatter_actor::buffer_action(void *dst_buffer, void *msg_buffer, action* ac)
 {
+  sprockit::abort("halving_reduce_scatter: not implemented");
 }
 
 }

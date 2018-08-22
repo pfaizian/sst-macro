@@ -64,6 +64,7 @@ DeclareDebugSlot(sumi);
 #define print_size(x) printf("%s %d: sizeof(%s)=%d\n", __FILE__, __LINE__, #x, sizeof(x))
 
 namespace sumi {
+namespace deprecated {
 
 struct enum_hash {
   template <typename T>
@@ -235,8 +236,8 @@ class transport {
    * @param tag
    * @return
    */
-  virtual collective_done_message* collective_block(
-      collective::type_t ty, int tag, int cq_id = 0) = 0;
+  virtual ::sumi::deprecated::collective_done_message* collective_block(
+      ::sumi::collective::type_t ty, int tag, int cq_id = 0) = 0;
 
   bool use_eager_protocol(uint64_t byte_length) const {
     return byte_length < eager_cutoff_;
@@ -276,7 +277,7 @@ class transport {
    * @param fxn The function that merges vote, usually AND, OR, MAX, MIN
    * @param context The context (i.e. initial set of failed procs)
    */
-  void dynamic_tree_vote(int vote, int tag, vote_fxn fxn, collective::config cfg = collective::cfg());
+//   void dynamic_tree_vote(int vote, int tag, vote_fxn fxn, collective::config cfg = collective::cfg());
 
   template <template <class> class VoteOp>
   void vote(int vote, int tag, collective::config cfg = collective::cfg()){
@@ -284,20 +285,20 @@ class transport {
     dynamic_tree_vote(vote, tag, &op_class_type::op, cfg);
   }
 
-  /**
-   * The total size of the input buffer in bytes is nelems*type_size*comm_size
-   * @param dst  Buffer for the result. Can be NULL to ignore payloads.
-   * @param src  Buffer for the input. Can be NULL to ignore payloads.
-   *             Automatically memcpy from src to dst.
-   * @param nelems The number of elements in the result buffer at the end
-   * @param type_size The size of the input type, i.e. sizeof(int), sizeof(double)
-   * @param tag A unique tag identifier for the collective
-   * @param fxn The function that will actually perform the reduction
-   * @param fault_aware Whether to execute in a fault-aware fashion to detect failures
-   * @param context The context (i.e. initial set of failed procs)
-   */
-  void reduce_scatter(void* dst, void* src, int nelems, int type_size, int tag, reduce_fxn fxn,
-                     collective::config cfg = collective::cfg());
+//   /**
+//    * The total size of the input buffer in bytes is nelems*type_size*comm_size
+//    * @param dst  Buffer for the result. Can be NULL to ignore payloads.
+//    * @param src  Buffer for the input. Can be NULL to ignore payloads.
+//    *             Automatically memcpy from src to dst.
+//    * @param nelems The number of elements in the result buffer at the end
+//    * @param type_size The size of the input type, i.e. sizeof(int), sizeof(double)
+//    * @param tag A unique tag identifier for the collective
+//    * @param fxn The function that will actually perform the reduction
+//    * @param fault_aware Whether to execute in a fault-aware fashion to detect failures
+//    * @param context The context (i.e. initial set of failed procs)
+//    */
+//   void reduce_scatter(void* dst, void* src, int nelems, int type_size, int tag, reduce_fxn fxn,
+//                      collective::config cfg = collective::cfg());
 
   template <typename data_t, template <typename> class Op>
   void reduce_scatter(void* dst, void* src, int nelems, int tag, collective::config cfg = collective::cfg()){
@@ -305,102 +306,101 @@ class transport {
     reduce_scatter(dst, src, nelems, sizeof(data_t), tag, &op_class_type::op, cfg);
   }
 
-  /**
-   * The total size of the input/result buffer in bytes is nelems*type_size
-   * @param dst  Buffer for the result. Can be NULL to ignore payloads.
-   * @param src  Buffer for the input. Can be NULL to ignore payloads.
-   *             Automatically memcpy from src to dst.
-   * @param nelems The number of elements in the input and result buffer.
-   * @param type_size The size of the input type, i.e. sizeof(int), sizeof(double)
-   * @param tag A unique tag identifier for the collective
-   * @param fxn The function that will actually perform the reduction
-   * @param fault_aware Whether to execute in a fault-aware fashion to detect failures
-   * @param context The context (i.e. initial set of failed procs)
-   */
-  void allreduce(void* dst, void* src, int nelems, int type_size, int tag, reduce_fxn fxn,
-                         collective::config cfg = collective::cfg());
+//   /**
+//    * The total size of the input/result buffer in bytes is nelems*type_size
+//    * @param dst  Buffer for the result. Can be NULL to ignore payloads.
+//    * @param src  Buffer for the input. Can be NULL to ignore payloads.
+//    *             Automatically memcpy from src to dst.
+//    * @param nelems The number of elements in the input and result buffer.
+//    * @param type_size The size of the input type, i.e. sizeof(int), sizeof(double)
+//    * @param tag A unique tag identifier for the collective
+//    * @param fxn The function that will actually perform the reduction
+//    * @param fault_aware Whether to execute in a fault-aware fashion to detect failures
+//    * @param context The context (i.e. initial set of failed procs)
+//    */
+//   void allreduce(void* dst, void* src, int nelems, int type_size, int tag, reduce_fxn fxn,
+//                          collective::config cfg = collective::cfg());
 
-  template <typename data_t, template <typename> class Op>
-  void allreduce(void* dst, void* src, int nelems, int tag, collective::config cfg = collective::cfg()){
-    typedef ReduceOp<Op, data_t> op_class_type;
-    allreduce(dst, src, nelems, sizeof(data_t), tag, &op_class_type::op, cfg);
-  }
+//   template <typename data_t, template <typename> class Op>
+//   void allreduce(void* dst, void* src, int nelems, int tag, collective::config cfg = collective::cfg()){
+//     typedef ReduceOp<Op, data_t> op_class_type;
+//     allreduce(dst, src, nelems, sizeof(data_t), tag, &op_class_type::op, cfg);
+//   }
 
-  /**
-   * The total size of the input/result buffer in bytes is nelems*type_size
-   * @param dst  Buffer for the result. Can be NULL to ignore payloads.
-   * @param src  Buffer for the input. Can be NULL to ignore payloads.
-   *             Automatically memcpy from src to dst.
-   * @param nelems The number of elements in the input and result buffer.
-   * @param type_size The size of the input type, i.e. sizeof(int), sizeof(double)
-   * @param tag A unique tag identifier for the collective
-   * @param fxn The function that will actually perform the reduction
-   * @param fault_aware Whether to execute in a fault-aware fashion to detect failures
-   * @param context The context (i.e. initial set of failed procs)
-   */
-  void scan(void* dst, void* src, int nelems, int type_size, int tag, reduce_fxn fxn,
-        collective::config cfg = collective::cfg());
+//   /**
+//    * The total size of the input/result buffer in bytes is nelems*type_size
+//    * @param dst  Buffer for the result. Can be NULL to ignore payloads.
+//    * @param src  Buffer for the input. Can be NULL to ignore payloads.
+//    *             Automatically memcpy from src to dst.
+//    * @param nelems The number of elements in the input and result buffer.
+//    * @param type_size The size of the input type, i.e. sizeof(int), sizeof(double)
+//    * @param tag A unique tag identifier for the collective
+//    * @param fxn The function that will actually perform the reduction
+//    * @param fault_aware Whether to execute in a fault-aware fashion to detect failures
+//    * @param context The context (i.e. initial set of failed procs)
+//    */
+//   void scan(void* dst, void* src, int nelems, int type_size, int tag, reduce_fxn fxn,
+//         collective::config cfg = collective::cfg());
+// 
+//   template <typename data_t, template <typename> class Op>
+//   void scan(void* dst, void* src, int nelems, int tag, collective::config cfg = collective::cfg()){
+//     typedef ReduceOp<Op, data_t> op_class_type;
+//     scan(dst, src, nelems, sizeof(data_t), tag, &op_class_type::op, cfg);
+//   }
 
-  template <typename data_t, template <typename> class Op>
-  void scan(void* dst, void* src, int nelems, int tag, collective::config cfg = collective::cfg()){
-    typedef ReduceOp<Op, data_t> op_class_type;
-    scan(dst, src, nelems, sizeof(data_t), tag, &op_class_type::op, cfg);
-  }
-
-  virtual void reduce(int root, void* dst, void* src, int nelems, int type_size, int tag,
-    reduce_fxn fxn, collective::config cfg = collective::cfg());
-
-  template <typename data_t, template <typename> class Op>
-  void reduce(int root, void* dst, void* src, int nelems, int tag, collective::config cfg = collective::cfg()){
-    typedef ReduceOp<Op, data_t> op_class_type;
-    reduce(root, dst, src, nelems, sizeof(data_t), tag, &op_class_type::op, cfg);
-  }
+//   virtual void reduce(int root, void* dst, void* src, int nelems, int type_size, int tag,
+//     reduce_fxn fxn, collective::config cfg = collective::cfg());
+// 
+//   template <typename data_t, template <typename> class Op>
+//   void reduce(int root, void* dst, void* src, int nelems, int tag, collective::config cfg = collective::cfg()){
+//     typedef ReduceOp<Op, data_t> op_class_type;
+//     reduce(root, dst, src, nelems, sizeof(data_t), tag, &op_class_type::op, cfg);
+//   }
 
 
-  /**
-   * The total size of the input/result buffer in bytes is nelems*type_size
-   * @param dst  Buffer for the result. Can be NULL to ignore payloads.
-   * @param src  Buffer for the input. Can be NULL to ignore payloads. This need not be public! Automatically memcpy from src to public facing dst.
-   * @param nelems The number of elements in the input and result buffer.
-   * @param type_size The size of the input type, i.e. sizeof(int), sizeof(double)
-   * @param tag A unique tag identifier for the collective
-   * @param fault_aware Whether to execute in a fault-aware fashion to detect failures
-   * @param context The context (i.e. initial set of failed procs)
-   */
-  void allgather(void* dst, void* src, int nelems, int type_size, int tag,
-                         collective::config = collective::cfg());
+//   /**
+//    * The total size of the input/result buffer in bytes is nelems*type_size
+//    * @param dst  Buffer for the result. Can be NULL to ignore payloads.
+//    * @param src  Buffer for the input. Can be NULL to ignore payloads. This need not be public! Automatically memcpy from src to public facing dst.
+//    * @param nelems The number of elements in the input and result buffer.
+//    * @param type_size The size of the input type, i.e. sizeof(int), sizeof(double)
+//    * @param tag A unique tag identifier for the collective
+//    * @param fault_aware Whether to execute in a fault-aware fashion to detect failures
+//    * @param context The context (i.e. initial set of failed procs)
+//    */
+//   void allgather(void* dst, void* src, int nelems, int type_size, int tag,
+//                          collective::config = collective::cfg());
+// 
+//   void allgatherv(void* dst, void* src, int* recv_counts, int type_size, int tag,
+//                           collective::config = collective::cfg());
 
-  void allgatherv(void* dst, void* src, int* recv_counts, int type_size, int tag,
-                          collective::config = collective::cfg());
+//  void gather(int root, void* dst, void* src, int nelems, int type_size, int tag,
+//                      collective::config = collective::cfg());
 
-  void gather(int root, void* dst, void* src, int nelems, int type_size, int tag,
-                      collective::config = collective::cfg());
+//   void gatherv(int root, void* dst, void* src, int sendcnt, int* recv_counts, int type_size, int tag, collective::config = collective::cfg());
 
-  void gatherv(int root, void* dst, void* src, int sendcnt, int* recv_counts, int type_size, int tag,
-                       collective::config = collective::cfg());
+  // void alltoall(void* dst, void* src, int nelems, int type_size, int tag,
+  //                       collective::config = collective::cfg());
 
-  void alltoall(void* dst, void* src, int nelems, int type_size, int tag,
-                        collective::config = collective::cfg());
+  // void alltoallv(void* dst, void* src, int* send_counts, int* recv_counts, int type_size, int tag,
+  //                        collective::config = collective::cfg());
 
-  void alltoallv(void* dst, void* src, int* send_counts, int* recv_counts, int type_size, int tag,
-                         collective::config = collective::cfg());
+//  void scatter(int root, void* dst, void* src, int nelems, int type_size, int tag,
+//                 collective::config = collective::cfg());
+//
+//  void scatterv(int root, void* dst, void* src, int* send_counts, int recvcnt, int type_size, int tag,
+//                        collective::config = collective::cfg());
 
-  void scatter(int root, void* dst, void* src, int nelems, int type_size, int tag,
-                 collective::config = collective::cfg());
+  // void wait_barrier(int tag);
 
-  void scatterv(int root, void* dst, void* src, int* send_counts, int recvcnt, int type_size, int tag,
-                        collective::config = collective::cfg());
+ //  /**
+ //   * Essentially just executes a zero-byte allgather.
+ //   * @param tag
+ //   * @param fault_aware
+ //   */
+ //  void barrier(int tag, collective::config = collective::cfg());
 
-  void wait_barrier(int tag);
-
-  /**
-   * Essentially just executes a zero-byte allgather.
-   * @param tag
-   * @param fault_aware
-   */
-  void barrier(int tag, collective::config = collective::cfg());
-
-  void bcast(int root, void* buf, int nelems, int type_size, int tag, collective::config cfg = collective::cfg());
+//   void bcast(int root, void* buf, int nelems, int type_size, int tag, collective::config cfg = collective::cfg());
   
   void system_bcast(message* msg);
 
@@ -475,7 +475,7 @@ class transport {
 
   virtual void go_revive() = 0;
 
- private:  
+ public:  
   void finish_collective(collective* coll, collective_done_message* dmsg);
 
   void start_collective(collective* coll);
@@ -497,7 +497,7 @@ class transport {
    */
   message* poll_new(bool blocking, double timeout = -1);
 
- private:
+ public:
   /**
    * Helper function for doing operations necessary to close out a heartbeat
    * @param dmsg
@@ -556,19 +556,6 @@ class transport {
   }
 
  private:
-  static collective_algorithm_selector* allgather_selector_;
-  static collective_algorithm_selector* alltoall_selector_;
-  static collective_algorithm_selector* alltoallv_selector_;
-  static collective_algorithm_selector* allreduce_selector_;
-  static collective_algorithm_selector* reduce_scatter_selector_;
-  static collective_algorithm_selector* scan_selector_;
-  static collective_algorithm_selector* allgatherv_selector_;
-  static collective_algorithm_selector* bcast_selector_;
-  static collective_algorithm_selector* gather_selector_;
-  static collective_algorithm_selector* gatherv_selector_;
-  static collective_algorithm_selector* reduce_selector_;
-  static collective_algorithm_selector* scatter_selector_;
-  static collective_algorithm_selector* scatterv_selector_;
 
 
 #if SSTMAC_COMM_SYNC_STATS
@@ -735,6 +722,7 @@ class terminate_exception : public std::exception
 {
 };
 
+// TODO just use nullptr
 static void* sumi_null_ptr = ((void*)0x123);
 
 static inline bool isNonNull(void* buf){
@@ -742,11 +730,11 @@ static inline bool isNonNull(void* buf){
 }
 
 static inline bool isNull(void* buf){
-  return !(sumi::isNonNull(buf));
+  return !(::sumi::deprecated::isNonNull(buf));
 }
 
-
-}
+} // namespace deprecated
+} // namespace sumi
 
 
 

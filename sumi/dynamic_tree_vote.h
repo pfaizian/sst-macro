@@ -54,7 +54,7 @@ namespace sumi {
 
 
 class dynamic_tree_vote_message :
- public collective_work_message
+ public deprecated::collective_work_message
 {
  ImplementSerializable(dynamic_tree_vote_message)
 
@@ -121,7 +121,7 @@ class dynamic_tree_vote_actor :
 
   dynamic_tree_vote_actor(int vote,
     vote_fxn fxn, int tag,
-    transport* my_api, const collective::config& cfg);
+    ::sstmac::sumi::transport* my_api, const collective::config& cfg);
 
   stage_t stage() const {
     return stage_;
@@ -299,7 +299,7 @@ class dynamic_tree_vote_collective :
     return "sumi persistent resilient vote collective";
   }
 
-  void recv(int target, collective_work_message* msg) override;
+  void recv(int target, sumi::deprecated::collective_work_message* msg) override;
 
   void start() override;
 
@@ -311,7 +311,7 @@ class dynamic_tree_vote_collective :
     int redundant_tree_vote,
     vote_fxn fxn,
     int tag,
-    transport* my_api,
+    ::sstmac::sumi::transport* my_api,
     const config& cfg);
 
  protected:

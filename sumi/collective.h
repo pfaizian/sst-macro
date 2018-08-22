@@ -47,7 +47,7 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include <sumi/timeout.h>
 #include <sumi/collective_message_fwd.h>
-#include <sumi/transport_fwd.h>
+#include <sstmac/libraries/sumi/sumi_transport_fwd.h>
 #include <sumi/communicator_fwd.h>
 #include <sumi/collective_actor_fwd.h>
 #include <sumi/comm_functions.h>
@@ -131,9 +131,9 @@ class collective
 
   static const char* tostr(type_t ty);
 
-  virtual void recv(int target, collective_work_message* msg) = 0;
+  virtual void recv(int target, deprecated::collective_work_message* msg) = 0;
 
-  void recv(collective_work_message* msg);
+  void recv(deprecated::collective_work_message* msg);
 
   virtual void start() = 0;
 
@@ -165,17 +165,17 @@ class collective
 
   virtual void deadlock_check(){}
 
-  void init(type_t type, transport* api, int tag, const config& cfg);
+  void init(type_t type, ::sstmac::sumi::transport* api, int tag, const config& cfg);
 
   virtual void init_actors(){}
 
  protected:
-  collective(type_t type, transport* api, int tag, const config& cfg);
+  collective(type_t type, ::sstmac::sumi::transport* api, int tag, const config& cfg);
 
   collective(){} //to be initialized later
 
  protected:
-  transport* my_api_;
+  ::sstmac::sumi::transport* my_api_;
   config cfg_;
   int dense_me_;
   int dense_nproc_;
@@ -193,11 +193,11 @@ class dag_collective :
   DeclareFactory(dag_collective)
 
  public:
-  void recv(int target, collective_work_message* msg) override;
+  void recv(int target, deprecated::collective_work_message* msg) override;
 
   void start() override;
 
-  void init(type_t type, transport *my_api,
+  void init(type_t type, ::sstmac::sumi::transport *my_api,
     void *dst, void *src,
     int nelems, int type_size,
     int tag, const config& cfg);
@@ -241,7 +241,7 @@ class dag_collective :
 
   bool fault_aware_;
 
-  std::list<collective_work_message*> pending_;
+  std::list<deprecated::collective_work_message*> pending_;
 };
 
 class collective_algorithm_selector

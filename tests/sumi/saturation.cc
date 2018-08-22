@@ -48,7 +48,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/common/sstmac_env.h>
 #include <sstmac/software/process/app.h>
 #include <sstmac/software/process/operating_system.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sstmac/libraries/sumi/sumi_api.h>
 #include <sstmac/libraries/sumi/sumi_thread.h>
 #include <sstmac/libraries/sumi/sumi.h>

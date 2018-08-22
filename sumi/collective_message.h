@@ -50,6 +50,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sprockit/thread_safe_new.h>
 
 namespace sumi {
+namespace deprecated {
 
 /**
  * @class collective_done_message
@@ -57,7 +58,7 @@ namespace sumi {
  * This encapsulates all the information about a collective that has completed in the background
  */
 class collective_done_message :
-  public message,
+  public ::sumi::deprecated::message,
   public sprockit::thread_safe_new<collective_done_message>
 {
 
@@ -168,7 +169,7 @@ class collective_done_message :
  * Main message type used by collectives
  */
 class collective_work_message :
-  public message
+  public ::sumi::deprecated::message
 {
   ImplementSerializable(collective_work_message)
  public:
@@ -299,6 +300,7 @@ class collective_work_message :
 
 };
 
+} // namespace deprecated
 }
 
 

@@ -46,7 +46,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sumi/collective_actor.h>
 #include <sumi/dense_rank_map.h>
 #include <sumi/message.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sumi/communicator.h>
 #include <sprockit/sim_parameters.h>
 #include <sprockit/stl_string.h>
@@ -101,7 +101,7 @@ collective::tostr(type_t ty)
 }
 
 void
-collective::init(type_t ty, transport *api, int tag, const config& cfg)
+collective::init(type_t ty, ::sstmac::sumi::transport *api, int tag, const config& cfg)
 {
   my_api_ = api;
   cfg_ = cfg;
@@ -125,7 +125,7 @@ collective::init(type_t ty, transport *api, int tag, const config& cfg)
     my_api_->rank(), cfg.dom->my_comm_rank(), cfg.dom->nproc(), dense_me_, tag, cfg.context);
 }
 
-collective::collective(type_t ty, transport* api, int tag, const config& cfg)
+collective::collective(type_t ty, ::sstmac::sumi::transport* api, int tag, const config& cfg)
 {
   init(ty, api, tag, cfg);
 }
@@ -155,16 +155,16 @@ collective::add_actors(collective *coll)
 }
 
 void
-collective::recv(collective_work_message* msg)
+collective::recv(::sumi::deprecated::collective_work_message* msg)
 {
   switch(msg->payload_type())
   {
-    case message::rdma_get_ack:
-    case message::rdma_put_ack:
+    case::sumi::deprecated::message::rdma_get_ack:
+    case::sumi::deprecated::message::rdma_put_ack:
       recv(msg->dense_sender(), msg); //I got an ack because my send data went out
       break;
     default:
-      recv(msg->dense_recver(), msg); //all other messages have the correct directionality - I am the recver in the transaction
+      recv(msg->dense_recver(), msg); //all other::sumi::deprecated::messages have the correct directionality - I am the recver in the transaction
       break;
   }
 }
@@ -213,7 +213,7 @@ dag_collective::init_actors()
 
 void
 dag_collective::init(type_t type,
-  transport *my_api,
+  ::sstmac::sumi::transport *my_api,
   void *dst, void *src,
   int nelems, int type_size,
   int tag, const config& cfg)
@@ -227,13 +227,13 @@ dag_collective::init(type_t type,
 }
 
 void
-dag_collective::recv(int target, collective_work_message* msg)
+dag_collective::recv(int target, ::sumi::deprecated::collective_work_message* msg)
 {
   debug_printf(sumi_collective | sumi_collective_sendrecv,
     "Rank %d=%d %s got %s:%p from %d=%d on tag=%d for target %d",
     my_api_->rank(), dense_me_,
     collective::tostr(type_),
-    message::tostr(msg->payload_type()), msg,
+   ::sumi::deprecated::message::tostr(msg->payload_type()), msg,
     msg->sender(), msg->dense_sender(),
     tag_, target);
 
@@ -291,9 +291,9 @@ dag_collective::add_actors(collective* coll)
 
   refcounts_[coll->comm()->my_comm_rank()] = ar->my_actors_.size();
 
-  std::list<collective_work_message*> pending = pending_;
+  std::list<::sumi::deprecated::collective_work_message*> pending = pending_;
   pending_.clear();
-  { std::list<collective_work_message*>::iterator it, end = pending.end();
+  { std::list<::sumi::deprecated::collective_work_message*>::iterator it, end = pending.end();
   for (it=pending.begin(); it != end; ++it){
     collective::recv(*it);
   } }

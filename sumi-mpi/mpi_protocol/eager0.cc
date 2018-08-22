@@ -68,7 +68,7 @@ eager0::send_header(mpi_queue* queue,
 {
   SSTMACBacktrace(MPIEager0Protocol_Send_Header);
   msg->set_content_type(mpi_message::eager_payload);
-  queue->post_header(msg, sumi::message::eager_payload, true/*do need an ack*/);
+  queue->post_header(msg, sumi::deprecated::message::eager_payload, true/*do need an ack*/);
 }
 
 void

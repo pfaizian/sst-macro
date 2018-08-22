@@ -110,7 +110,7 @@ mpi_api* sstmac_mpi()
 mpi_api::mpi_api(sprockit::sim_parameters* params,
                  sstmac::sw::software_id sid,
                  sstmac::sw::operating_system* os) :
-  sstmac::sumi_transport(params, "mpi", sid, os),
+  sstmac::sumi::transport(params, "mpi", sid, os),
   status_(is_fresh),
 #if SSTMAC_COMM_SYNC_STATS
   last_collection_(0),
@@ -227,7 +227,7 @@ mpi_api::init(int* argc, char*** argv)
 
   start_mpi_call(MPI_Init);
 
-  sumi_transport::init();
+  sstmac::sumi::transport::init();
 
   if (!os_) {
     sprockit::abort("mpiapi::init: os has not been initialized yet");

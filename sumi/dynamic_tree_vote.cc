@@ -43,10 +43,10 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include <sumi/dynamic_tree_vote.h>
-#include <sumi/transport.h>
 #include <sumi/communicator.h>
 #include <sprockit/stl_string.h>
 #include <algorithm>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 
 /*
 #undef debug_printf
@@ -161,7 +161,7 @@ dynamic_tree_vote_actor::up_partner(int rank)
 }
 
 dynamic_tree_vote_actor::dynamic_tree_vote_actor(int vote,
-    vote_fxn fxn, int tag, transport* my_api,
+    vote_fxn fxn, int tag, ::sstmac::sumi::transport* my_api,
     const collective::config& cfg) :
   collective_actor(my_api, tag, cfg), //true for always fault-aware
   vote_(vote),
@@ -294,7 +294,7 @@ dynamic_tree_vote_actor::send_message(dynamic_tree_vote_message::type_t ty, int 
     stl_string(msg->failed_procs()).c_str());
 #endif
   int global_phys_dst = global_rank(virtual_dst);
-  my_api_->send_payload(global_phys_dst, msg, message::no_ack, cfg_.cq_id);
+  my_api_->send_payload(global_phys_dst, msg, ::sumi::deprecated::message::no_ack, cfg_.cq_id);
 }
 
 void
@@ -333,7 +333,7 @@ dynamic_tree_vote_actor::merge_result(dynamic_tree_vote_message* msg)
 void
 dynamic_tree_vote_actor::put_done_notification()
 {
-  auto msg = new collective_done_message(tag_, collective::dynamic_tree_vote, cfg_.dom, cfg_.cq_id);
+  auto msg = new ::sumi::deprecated::collective_done_message(tag_, collective::dynamic_tree_vote, cfg_.dom, cfg_.cq_id);
   msg->set_vote(vote_);
   msg->set_comm_rank(cfg_.dom->my_comm_rank());
 #ifdef FEATURE_TAG_SUMI_RESILIENCE
@@ -531,7 +531,7 @@ dynamic_tree_vote_actor::recv(dynamic_tree_vote_message* msg)
 
 dynamic_tree_vote_collective::dynamic_tree_vote_collective(
   int vote, vote_fxn fxn, int tag,
-  transport* my_api, const config& cfg) :
+  ::sstmac::sumi::transport* my_api, const config& cfg) :
   collective(collective::dynamic_tree_vote, my_api, tag, cfg),
   vote_(vote),
   fxn_(fxn)
@@ -541,7 +541,7 @@ dynamic_tree_vote_collective::dynamic_tree_vote_collective(
 }
 
 void
-dynamic_tree_vote_collective::recv(int target, collective_work_message* msg)
+dynamic_tree_vote_collective::recv(int target, ::sumi::deprecated::collective_work_message* msg)
 {
   actor_map::iterator it = actors_.find(target);
   if (it == actors_.end()){

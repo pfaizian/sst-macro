@@ -43,7 +43,7 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include <sumi/ping.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sprockit/sim_parameters.h>
 #include <sprockit/util.h>
 #include <sprockit/keyword_registration.h>

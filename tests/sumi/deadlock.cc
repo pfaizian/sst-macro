@@ -50,7 +50,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/software/process/app.h>
 #include <sstmac/software/process/operating_system.h>
 #include <sstmac/software/process/thread.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sstmac/libraries/sumi/sumi.h>
 #include <sstmac/skeleton.h>
 #define sstmac_app_name user_app_cxx
@@ -76,9 +76,9 @@ main(int argc, char **argv)
 {
   comm_init();
 
-  sumi::transport* tport = sumi_api();
+  ::sstmac::sumi::transport* tport = sumi_api();
   sstmac::runtime::add_deadlock_check(
-    sstmac::new_deadlock_check(tport, &sumi::transport::deadlock_check));
+    sstmac::new_deadlock_check(tport, &::sstmac::sumi::transport::deadlock_check));
 
   int me = comm_rank();
   if (me == 0) sstmac::runtime::enter_deadlock_region();
@@ -87,7 +87,7 @@ main(int argc, char **argv)
     start_barrier();
     start_allreduce();
   }
-  message* msg = comm_poll();
+  ::sumi::deprecated::message* msg = comm_poll();
   msg = comm_poll();
 
   comm_finalize();

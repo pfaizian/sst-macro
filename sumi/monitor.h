@@ -49,7 +49,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sprockit/debug.h>
 #include <sumi/message.h>
 #include <sumi/timeout.h>
-#include <sumi/transport_fwd.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 
 DeclareDebugSlot(sumi_ping)
 DeclareDebugSlot(sumi_failure)
@@ -80,10 +80,10 @@ class function_set {
 
 class activity_monitor
 {
-  DeclareFactory(activity_monitor, transport*)
+  DeclareFactory(activity_monitor, ::sstmac::sumi::transport*)
  public:
   activity_monitor(sprockit::sim_parameters* params,
-                   transport* t) : api_(t){}
+                   ::sstmac::sumi::transport* t) : api_(t){}
 
   virtual ~activity_monitor(){}
 
@@ -91,7 +91,7 @@ class activity_monitor
 
   virtual void cancel_ping(int dst, timeout_function* func) = 0;
 
-  virtual void message_received(message* msg) = 0;
+  virtual void message_received(::sumi::deprecated::message* msg) = 0;
 
   virtual void renew_pings(double wtime) = 0;
 
@@ -100,7 +100,7 @@ class activity_monitor
   virtual void validate_all_pings() = 0;
 
  protected:
-  transport* api_;
+  ::sstmac::sumi::transport* api_;
 
 };
 

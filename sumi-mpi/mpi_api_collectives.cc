@@ -190,12 +190,12 @@ mpi_api::finish_collective(collective_op_base* op)
 void
 mpi_api::wait_collective(collective_op_base* op)
 {
-  std::list<collective_done_message*> pending;
+  std::list<sumi::deprecated::collective_done_message*> pending;
   while (1){
-    sumi::message* msg = blocking_poll(collective_cq_id());
-    if (msg->class_type() == message::collective_done){
+    sumi::deprecated::message* msg = blocking_poll(collective_cq_id());
+    if (msg->class_type() == ::sumi::deprecated::message::collective_done){
       //this is a collective done message
-      auto cmsg = dynamic_cast<collective_done_message*>(msg);
+      auto cmsg = dynamic_cast<sumi::deprecated::collective_done_message*>(msg);
       mpi_api_debug(sprockit::dbg::mpi_collective,
                     "found collective done message of type=%s tag=%d: need %s,%d",
                     collective::tostr(cmsg->type()), cmsg->tag(),
@@ -215,7 +215,7 @@ mpi_api::wait_collective(collective_op_base* op)
 
   finish_collective(op);
   
-  std::list<collective_done_message*>::iterator it, end = pending.end();
+  std::list<sumi::deprecated::collective_done_message*>::iterator it, end = pending.end();
   for (it=pending.begin(); it != end; ++it){
     completion_queues_[collective_cq_id()].push_back(*it);
   }

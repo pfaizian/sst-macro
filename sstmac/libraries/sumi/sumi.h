@@ -66,21 +66,21 @@ int comm_nproc();
 /**
     @param dst The destination to send to
 */
-void comm_send_header(int dst, message* msg);
+void comm_send_header(int dst, deprecated::message* msg);
 
 void comm_cancel_ping(int dst, int tag);
 
 void comm_ping(int dst, int tag, timeout_function* func);
 
-void comm_send_payload(int dst, message* msg);
+void comm_send_payload(int dst, deprecated::message* msg);
 
-void comm_send(int dst, message::payload_type_t ev, message* msg);
+void comm_send(int dst, deprecated::message::payload_type_t ev, deprecated::message* msg);
 
-void comm_rdma_put(int dst, message* msg);
+void comm_rdma_put(int dst, deprecated::message* msg);
 
-void comm_rdma_get(int dst, message* msg);
+void comm_rdma_get(int dst, deprecated::message* msg);
 
-void comm_nvram_get(int dst, message* msg);
+void comm_nvram_get(int dst, deprecated::message* msg);
 
 void comm_alltoall(void* dst, void* src, int nelems, int type_size, int tag,
                    collective::config cfg = collective::cfg());
@@ -160,9 +160,9 @@ void comm_vote(int vote, int tag, collective::config cfg = collective::cfg()){
   comm_vote(vote, tag, &op_class_type::op, cfg);
 }
 
-collective_done_message* comm_collective_block(collective::type_t ty, int tag);
+deprecated::collective_done_message* comm_collective_block(collective::type_t ty, int tag);
 
-message* comm_poll();
+deprecated::message* comm_poll();
 
 void compute(double sec);
 
@@ -180,7 +180,7 @@ void sleep_until(double sec);
  */
 double wall_time();
 
-sstmac::sumi_transport* sumi_api();
+sstmac::sumi::transport* sumi_api();
 
 #ifdef FEATURE_TAG_SUMI_RESILIENCE
 /**

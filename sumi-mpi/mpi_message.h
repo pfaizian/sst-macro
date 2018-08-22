@@ -60,7 +60,7 @@ Questions? Contact sst-macro-help@sandia.gov
 namespace sumi {
 
 class mpi_message final :
-  public sumi::message,
+  public sumi::deprecated::message,
   public sprockit::thread_safe_new<mpi_message>
 {
   ImplementSerializable(mpi_message)
@@ -96,7 +96,7 @@ class mpi_message final :
     return cln;
   }
 
-  sumi::message* clone(payload_type_t ty) const override {
+  sumi::deprecated::message* clone(payload_type_t ty) const override {
     return clone_me();
   }
 

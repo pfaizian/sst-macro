@@ -47,8 +47,8 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/software/process/operating_system.h>
 #include <sstmac/software/process/thread.h>
 #include <sstmac/libraries/sumi/sumi.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sumi/dense_rank_map.h>
-#include <sumi/transport.h>
 
 #include <sstmac/util.h>
 #include <sstmac/compute.h>
@@ -59,7 +59,7 @@ Questions? Contact sst-macro-help@sandia.gov
 using namespace sstmac;
 using namespace sstmac::sw;
 using namespace sstmac::hw;
-using namespace sumi;
+using namespace ::sumi;
 
 
 void

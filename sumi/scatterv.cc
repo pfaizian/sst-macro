@@ -44,7 +44,7 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include <sumi/scatterv.h>
 #include <sumi/communicator.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 
 namespace sumi {
 

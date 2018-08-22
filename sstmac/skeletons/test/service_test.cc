@@ -45,7 +45,8 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/software/process/operating_system.h>
 #include <sstmac/software/launch/launch_request.h>
 #include <sstmac/util.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
+// #include <sumi/transport.h>
 #include <sstmac/libraries/sumi/sumi.h>
 #include <sstmac/libraries/sumi/distributed_service.h>
 #include <sstmac/software/launch/job_launcher.h>
@@ -70,7 +71,7 @@ class test_service : public distributed_service
   void run() override;
 };
 
-class service_test_message : public sumi::message
+class service_test_message : public ::sumi::deprecated::message
 {
  public:
   std::string to_string() const override {
@@ -78,7 +79,7 @@ class service_test_message : public sumi::message
   }
 
   service_test_message(timestamp w) :
-    sumi::message(100), workload(w)
+    ::sumi::deprecated::message(100), workload(w)
   {
   }
 
@@ -89,7 +90,7 @@ void
 test_service::run()
 {
   while (!terminated()) {
-    sumi::message* msg = poll_for_message(true);
+    ::sumi::deprecated::message* msg = poll_for_message(true);
     if (msg){
       auto smsg = dynamic_cast<service_test_message*>(msg);
       printf("Service node %d sleeping for %8.4es\n", rank(), smsg->workload.sec());
@@ -112,7 +113,7 @@ int USER_MAIN(int argc, char** argv)
   int num_messages = params->get_optional_int_param("num_tasks", 10);
   timestamp task_length(1e-3);
 
-  sumi_transport* tport = sumi::sumi_api();
+  sstmac::sumi::transport* tport = ::sumi::sumi_api();
   tport->init();
 
   sstmac::sw::task_mapping::ptr srv = sstmac::sw::task_mapping::global_mapping("test_service");

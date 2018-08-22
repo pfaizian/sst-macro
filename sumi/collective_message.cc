@@ -46,6 +46,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/common/serializable.h>
 
 namespace sumi {
+namespace deprecated {
 
 #define enumcase(x) case x: return #x;
 const char*
@@ -129,4 +130,5 @@ collective_work_message::append_failed(const thread_safe_set<int>& failed)
 }
 #endif
 
-}
+} // namespace deprecated
+} // namespace sumi
