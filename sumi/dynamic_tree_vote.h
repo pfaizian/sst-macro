@@ -166,14 +166,6 @@ class dynamic_tree_vote_actor :
   void recv_expected_up_vote(dynamic_tree_vote_message* msg);
 
   /**
-   * Recv unexpected up vote. This comes from a granchild,great-granchild,etc node
-   * we were not expected to hear from.
-   * This indicates that a child node has failed and we must reconnect.
-   * @param msg
-   */
-  void recv_unexpected_up_vote(dynamic_tree_vote_message* msg);
-
-  /**
    * If processing up votes, merge the incoming up vote with our known results.
    * At this point, the vote is mutable and new information can be added
    * @param msg
@@ -238,54 +230,6 @@ class dynamic_tree_vote_actor :
   stage_t stage_;
 
   std::set<int> up_votes_recved_;
-
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  /**
-   * Receive a request from a new parent.
-   * If our parent has failed (but we don't know it yet),
-   * we might get an adoption request from a grandparent or great-grandparent.
-   * This declares the parent failed and reconnects to the new parent.
-   * @param msg
-   */
-  void recv_adoption_request(dynamic_tree_vote_message* msg);
-
-  void contact_new_down_partner(int rank);
-
-  void add_new_down_partner(int rank);
-
-
-  /**
-   * Respond to a failure notification, but first check to see if we already responded to it
-   * This a universal response for all notifications where they be pings, messages, NACKS, etc
-   * It is safe for any failure notifier to call this
-   * @param rank
-   */
-  void handle_dense_partner_failure(int dense_rank);
-
-  /**
-   * If this failure is not previously handled,
-   * rebuild the tree to work around the failure.
-   * This should only be called ONCE for each failure.
-   * If this is called multiple times for the same failure,
-   * the behavior is undefined.  In general, only use
-   * #handle_virtual_partner_failure for safety.
-   * @param virtual_rank
-   */
-  void rebalance_around_dense_partner_failure(int dense_rank);
-
-  void up_partner_failed();
-
-  void down_partner_failed(int rank);
-
-  void dense_partner_ping_failed(int virtual_rank) override;
-
-  virtual bool check_neighbor(int phys_rank) override;
-
-  virtual void stop_check_neighbor(int phys_rank) override;
-
-  thread_safe_set<int> agreed_upon_failures_;
-  thread_safe_set<int> failures_handled_;
-#endif
 };
 
 

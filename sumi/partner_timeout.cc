@@ -44,14 +44,3 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include <sumi/partner_timeout.h>
 
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-namespace sumi {
-
-void
-collective_timeout::time_out(int partner)
-{
-  actor_->partner_ping_failed(partner);
-}
-
-}
-#endif

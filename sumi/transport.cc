@@ -85,15 +85,6 @@ namespace deprecated {
 
 
 transport::transport(sprockit::sim_parameters* params) :
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  lazy_watch_(false),
-  heartbeat_active_(false),
-  heartbeat_running_(false),
-  is_dead_(false),
-  monitor_(nullptr),
-  nspares_(0),
-  recovery_lock_(0),
-#endif
   completion_queues_(1), //guaranteed one to begin with
   inited_(false),
   system_collective_tag_(-1), //negative tags reserved for special system work
@@ -103,15 +94,6 @@ transport::transport(sprockit::sim_parameters* params) :
   use_hardware_ack_(false),
   global_domain_(nullptr)
 {
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  heartbeat_tag_start_ = 1e9;
-  heartbeat_tag_stop_ = heartbeat_tag_start_ + 10000;
-  heartbeat_tag_ = heartbeat_tag_start_;
-
-  monitor_ = activity_monitor::factory::get_optional_param("activity_monitor", "ping",
-                                        params, this);
-  lazy_watch_ = params->get_optional_bool_param("lazy_watch", true);
-#endif
   eager_cutoff_ = params->get_optional_int_param("eager_cutoff", 512);
   use_put_protocol_ = params->get_optional_bool_param("use_put_protocol", false);
 }
@@ -166,26 +148,6 @@ transport::finish()
   //this should really loop through and kill off all the pings
   //so none of them execute
   finalized_ = true;
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  debug_printf(sprockit::dbg::sumi,
-      "Rank %d sending finalize terminate to %s",
-      rank_, failed_ranks_.to_string().c_str());
-
-  thread_safe_set<int>::iterator it, end = failed_ranks_.start_iteration();
-  for (it=failed_ranks_.begin(); it != end; ++it){
-    int dst = *it;
-    debug_printf(sprockit::dbg::sumi,
-        "Rank %d sending finalize terminate to %d",
-        rank_, dst);
-    send_terminate(dst);
-  }
-  failed_ranks_.end_iteration();
-
-  monitor_->validate_done();
-  stop_heartbeat();
-  delete monitor_;
-  monitor_ = nullptr;
-#endif
 }
 
 message*
@@ -392,12 +354,6 @@ transport::handle(message* msg)
       }
     }
   }
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  case message::ping: {  
-    monitor_->message_received(msg);
-    return nullptr;
-  }
-#endif
   case message::no_class: {
       spkt_throw_printf(sprockit::value_error,
         "transport::handle: got message %s with no class of type %s",
@@ -458,9 +414,6 @@ transport::send_self_terminate()
 
 transport::~transport()
 {
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  if (monitor_) delete monitor_;
-#endif
   if (global_domain_) delete global_domain_;
 }
 
@@ -539,30 +492,6 @@ transport::deliver_pending(collective* coll, int tag, collective::type_t ty)
 void
 transport::vote_done(int context, collective_done_message* dmsg)
 {
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  //this requires some extra processing
-  //and doesn't always generate an operation done
-  votes_done_[dmsg->tag()] = vote_result(dmsg->vote(), dmsg->failed_procs());
-  vote_result& prev_context = votes_done_[context];
-  //merge the previous context
-  votes_done_[dmsg->tag()].failed_ranks.insert_all(prev_context.failed_ranks);
-  failed_ranks_.insert_all(votes_done_[dmsg->tag()].failed_ranks);
-
-  //if we have some failures, let the watchers know that things have failed
-  thread_safe_set<int>::iterator it, end = dmsg->failed_procs().start_iteration();
-  for (it=dmsg->failed_procs().begin(); it != end; ++it){
-    fail_watcher(*it);
-  }
-  dmsg->failed_procs().end_iteration();
-
-  if (is_heartbeat(dmsg)){
-    dmsg->set_type(collective::heartbeat);
-    if (heartbeat_active_){
-      schedule_next_heartbeat();
-    }
-    heartbeat_running_ = false;
-  } else
-#endif
     completion_queues_[dmsg->cq_id()].push_back(dmsg);
 }
 
@@ -1013,175 +942,6 @@ transport::send_payload(int dst, message* msg, int send_cq, int recv_cq)
 {
   smsg_send(dst, message::eager_payload, msg, send_cq, recv_cq);
 }
-
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-void
-transport::start_heartbeat(double interval)
-{
-  if (heartbeat_active_){
-    spkt_throw_printf(sprockit::illformed_error,
-        "sumi_api::start_heartbeat: heartbeat already active");
-    return;
-  }
-
-  heartbeat_active_ = true;
-  heartbeat_interval_ = interval;
-  do_heartbeat(options::initial_context);
-}
-
-void
-transport::stop_heartbeat()
-{
-  heartbeat_active_ = false;
-}
-
-void
-transport::next_heartbeat()
-{
-  //because of weirdness in scheduling
-  //we might get a heartbeat request after finalizing
-  if (!finalized_)
-    do_heartbeat(heartbeat_tag_);
-}
-
-void
-transport::do_heartbeat(int prev_context)
-{
-  CHECK_IF_I_AM_DEAD(return);
-
-  heartbeat_running_ = true;
-  if (heartbeat_tag_ == heartbeat_tag_stop_){
-    heartbeat_tag_ = heartbeat_tag_start_;
-  } else {
-    ++heartbeat_tag_;
-  }
-
-  if (nproc() == 1)
-    return;
-
-  int vote = 1;
-  dynamic_tree_vote_collective* voter = new dynamic_tree_vote_collective(
-    vote, &And<int>::op, heartbeat_tag_, this, global_domain_, prev_context);
-  collectives_[collective::dynamic_tree_vote][heartbeat_tag_] = voter;
-  voter->start();
-  deliver_pending(voter, heartbeat_tag_, collective::dynamic_tree_vote);
-
-}
-
-void
-transport::cancel_ping(int dst, timeout_function* func)
-{
-  monitor_->cancel_ping(dst, func);
-}
-
-bool
-transport::ping(int dst, timeout_function* func)
-{
-  CHECK_IF_I_AM_DEAD(return false);
-  validate_api();
-  if (is_failed(dst)){
-    return true;
-  } else {
-    monitor_->ping(dst, func);
-    return false;
-  }
-}
-
-void
-transport::stop_watching(int dst, timeout_function* func)
-{
-  if (!lazy_watch_){
-    cancel_ping(dst, func);
-    return;
-  }
-
-  watcher_map::iterator it = watchers_.find(dst);
-  if (it==watchers_.end()){
-    spkt_throw_printf(sprockit::value_error,
-      "transport not watching %d, cannot erase", dst);
-  }
-  function_set& fset = it->second;
-  int refcount = fset.erase(func);
-  if (refcount == 0){
-    watchers_.erase(it);
-  }
-}
-
-bool
-transport::start_watching(int dst, timeout_function *func)
-{
-  if (!lazy_watch_){
-    return ping(dst, func);
-  }
-
-  validate_api();
-  if (is_failed(dst)){
-    return true;
-  } else {
-    debug_printf(sprockit::dbg::sumi | sprockit::dbg::sumi_ping,
-      "Rank %d start watching %d", rank_, dst);
-    function_set& fset = watchers_[dst];
-    fset.append(func);
-    return false;
-  }
-}
-
-void
-transport::fail_watcher(int dst)
-{
-  if (!lazy_watch_)
-    return;
-
-  std::map<int, function_set>::iterator it = watchers_.find(dst);
-  if (it == watchers_.end())
-    return;
-
-  debug_printf(sprockit::dbg::sumi | sprockit::dbg::sumi_ping,
-    "Rank %d failing watcher for %d", rank_, dst);
-  function_set& fset = it->second;
-  fset.timeout_all_listeners(dst);
-  watchers_.erase(dst);
-}
-
-void
-transport::die()
-{
-  is_dead_ = true;
-  go_die();
-  throw terminate_exception();
-}
-
-void
-transport::revive()
-{
-  is_dead_ = false;
-  go_revive();
-}
-
-void
-transport::renew_pings()
-{
-  monitor_->renew_pings(wall_time());
-}
-
-static const thread_safe_set<int> empty_set;
-
-const thread_safe_set<int>&
-transport::failed_ranks(int context) const
-{
-  if (context == options::initial_context){
-    return empty_set;
-  }
-
-  auto it = votes_done_.find(context);
-  if (it == votes_done_.end()){
-    spkt_throw_printf(sprockit::value_error,
-        "sumi_api::failed_rank: unknown or uncommitted context %d on rank %d",
-        context, rank_);
-  }
-  return it->second.failed_ranks;
-}
-#endif
 
 } // namespace deprecated
 } // namespace sumi

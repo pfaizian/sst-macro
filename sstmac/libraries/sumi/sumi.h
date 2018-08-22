@@ -182,28 +182,6 @@ double wall_time();
 
 sstmac::sumi::transport* sumi_api();
 
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-/**
-* Helper function. Kill the node that is currently running.
-* This is invoked by an application.  This allows an
-* application to die at a very, very specific point in application execution.
-*/
-void comm_kill_node();
-
-/**
-* Helper function. Kill the process that is currently running.
-* This only kills the process - it leaves the node alive and well.
-*/
-void comm_kill_process();
-
-const thread_safe_set<int>& comm_failed_ranks();
-
-const thread_safe_set<int>& comm_failed_ranks(int context);
-
-void comm_start_heartbeat(double interval);
-
-void comm_stop_heartbeat();
-#endif
 
 }
 
