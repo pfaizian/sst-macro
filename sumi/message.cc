@@ -46,6 +46,7 @@ Questions? Contact sst-macro-help@sandia.gov
 
 
 namespace sumi {
+namespace deprecated {
 
 const int message::ack_size = 16;
 const int message::header_size = 64;
@@ -300,4 +301,5 @@ system_bcast_message::serialize_order(sstmac::serializer& ser)
   ser & action_;
 }
 
-}
+} // namespace deprecated
+} // namespace sumi

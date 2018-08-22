@@ -43,7 +43,7 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include <sumi/allreduce.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sumi/communicator.h>
 #include <sprockit/output.h>
 #include <sprockit/stl_string.h>

@@ -116,7 +116,7 @@ mpi_message::serialize_order(sstmac::serializer& ser)
 void
 mpi_message::clone_into(mpi_message* cln) const
 {
-  sumi::message::clone_into(cln);
+  sumi::deprecated::message::clone_into(cln);
   cln->count_ = count_;
   cln->type_ = type_;
   cln->tag_ = tag_;

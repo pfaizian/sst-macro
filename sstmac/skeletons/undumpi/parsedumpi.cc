@@ -103,7 +103,7 @@ int parsedumpi::skeleton_main()
   //only rank 0 should print progress
   bool print_my_progress = rank == 0 && print_progress_;
   sstmac::runtime::add_deadlock_check(
-    sstmac::new_deadlock_check(mpi(), &sumi::transport::deadlock_check));
+    sstmac::new_deadlock_check(mpi(), &sstmac::sumi::transport::deadlock_check));
   sstmac::runtime::enter_deadlock_region();
   try {
     cbacks.parse_stream(fname.c_str(), print_my_progress);

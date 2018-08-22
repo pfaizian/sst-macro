@@ -64,6 +64,7 @@ class serialize<sumi::public_buffer>
 END_SERIALIZATION_NAMESPACE
 
 namespace sumi {
+namespace deprecated {
 
 class message :
   public sprockit::printable,
@@ -419,7 +420,7 @@ class system_bcast_message : public message
 */
 class transport_message {
  public:
-  sumi::message* take_payload() {
+  ::sumi::deprecated::message* take_payload() {
     auto ret = payload_;
     payload_ = nullptr;
     return ret;
@@ -430,14 +431,15 @@ class transport_message {
   }
 
  protected:
-  transport_message(sumi::message* pload) :
+  transport_message(sumi::deprecated::message* pload) :
     payload_(pload) {}
 
   transport_message(){} //for serialization
 
-  sumi::message* payload_;
+  sumi::deprecated::message* payload_;
 };
 
-}
+} //namespace deprecated
+} //namespace sumi
 
 #endif // SIMPLE_MESSAGE_H

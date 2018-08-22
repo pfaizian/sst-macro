@@ -366,7 +366,7 @@ mpi_queue::send_completion_ack(mpi_message* message)
   //need to send an ack back to sender
   int dst = message->sender();
   message->payload_to_completion_ack();
-  api_->send_header(dst, message, message::no_ack, api_->pt2pt_cq_id());
+  api_->send_header(dst, message, ::sumi::deprecated::message::no_ack, api_->pt2pt_cq_id());
 }
 
 void
@@ -595,9 +595,9 @@ mpi_queue::handle_nic_ack(mpi_message* message)
 }
 
 void
-mpi_queue::handle_poll_msg(sumi::message* msg)
+mpi_queue::handle_poll_msg(sumi::deprecated::message* msg)
 {
-  if (msg->class_type() == message::collective_done){
+  if (msg->class_type() == sumi::deprecated::message::collective_done){
     handle_collective_done(msg);
   } else {
     mpi_message* mpimsg = dynamic_cast<mpi_message*>(msg);
@@ -610,7 +610,7 @@ mpi_queue::handle_poll_msg(sumi::message* msg)
 void
 mpi_queue::nonblocking_progress()
 {
-  sumi::message* msg = api_->poll(false); //do not block
+  sumi::deprecated::message* msg = api_->poll(false); //do not block
   while (msg){
     handle_poll_msg(msg);
     msg = api_->poll(false);
@@ -630,7 +630,7 @@ mpi_queue::progress_loop(mpi_request* req)
   sstmac::timestamp wait_start = api_->now();
   while (!req->is_complete()) {
     mpi_queue_debug("blocking on progress loop");
-    sumi::message* msg = api_->poll(true); //block until message arrives
+    sumi::deprecated::message* msg = api_->poll(true); //block until message arrives
     handle_poll_msg(msg);
 #if SSTMAC_COMM_SYNC_STATS
     if (req->is_complete()){
@@ -658,9 +658,9 @@ mpi_queue::at_least_one_complete(const std::vector<mpi_request*>& req)
 }
 
 void
-mpi_queue::handle_collective_done(sumi::message* msg)
+mpi_queue::handle_collective_done(sumi::deprecated::message* msg)
 {
-  auto cmsg = dynamic_cast<collective_done_message*>(msg);
+  auto cmsg = dynamic_cast<sumi::deprecated::collective_done_message*>(msg);
   mpi_comm* comm = safe_cast(mpi_comm, cmsg->dom());
   mpi_request* req = comm->get_request(cmsg->tag());
   collective_op_base* op = req->collective_data();
@@ -676,7 +676,7 @@ mpi_queue::start_progress_loop(const std::vector<mpi_request*>& reqs)
   mpi_queue_debug("starting progress loop");
   while (!at_least_one_complete(reqs)) {
     mpi_queue_debug("blocking on progress loop");
-    sumi::message* msg = api_->poll(true); //block until msg arrives
+    sumi::deprecated::message* msg = api_->poll(true); //block until msg arrives
     handle_poll_msg(msg);
   }
   mpi_queue_debug("finishing progress loop");
@@ -686,7 +686,7 @@ void
 mpi_queue::forward_progress(double timeout)
 {
   mpi_queue_debug("starting forward progress with timeout=%f", timeout);
-  sumi::message* msg = api_->poll(true, timeout); //block until timeout
+  sumi::deprecated::message* msg = api_->poll(true, timeout); //block until timeout
   if (msg) handle_poll_msg(msg);
 }
 
@@ -717,14 +717,14 @@ mpi_queue::buffer_unexpected(mpi_message* msg)
 }
 
 void
-mpi_queue::post_header(mpi_message* msg, sumi::message::payload_type_t ty, bool needs_send_ack)
+mpi_queue::post_header(mpi_message* msg, sumi::deprecated::message::payload_type_t ty, bool needs_send_ack)
 {
   SSTMACBacktrace(MPIQueuePostHeader);
   mpi_comm* comm = api_->get_comm(msg->comm());
   int dst_world_rank = comm->peer_task(msg->dst_rank());
   msg->set_src_rank(comm->rank());
   api_->smsg_send(dst_world_rank, ty, msg,
-                  needs_send_ack ? api_->pt2pt_cq_id() : message::no_ack,
+                  needs_send_ack ? api_->pt2pt_cq_id() : sumi::deprecated::message::no_ack,
                   api_->pt2pt_cq_id());
 }
 
@@ -738,8 +738,8 @@ mpi_queue::post_rdma(mpi_message* msg,
   //mpi_comm* comm = api_->get_comm(msg->comm());
   //int src_world_rank = comm->peer_task(msg->src_rank());
   api_->rdma_get(msg->sender(), msg,
-                 needs_send_ack ? api_->pt2pt_cq_id() : message::no_ack,
-                 needs_recv_ack ? api_->pt2pt_cq_id() : message::no_ack);
+                 needs_send_ack ? api_->pt2pt_cq_id() : sumi::deprecated::message::no_ack,
+                 needs_recv_ack ? api_->pt2pt_cq_id() : sumi::deprecated::message::no_ack);
 }
 
 }

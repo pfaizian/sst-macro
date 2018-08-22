@@ -43,7 +43,7 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include <sumi/communicator.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sprockit/errors.h>
 
 namespace sumi {
@@ -56,7 +56,7 @@ communicator::rank_resolved(int global_rank, int comm_rank)
   }
 }
 
-global_communicator::global_communicator(transport *tport) :
+global_communicator::global_communicator(::sstmac::sumi::transport *tport) :
   transport_(tport), communicator(tport->rank())
 {
 }

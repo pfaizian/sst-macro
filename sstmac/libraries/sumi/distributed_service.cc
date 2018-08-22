@@ -44,7 +44,6 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include <sstmac/libraries/sumi/distributed_service.h>
 #include <sstmac/libraries/sumi/sumi_transport.h>
-#include <sumi/transport.h>
 #include <sprockit/keyword_registration.h>
 
 MakeDebugSlot(distributed_service)
@@ -74,24 +73,24 @@ distributed_service_app::skeleton_main()
   srv->init();
   debug("initialized distributed service %s on rank %d", libname_.c_str(), srv->rank());
   srv->barrier(0);
-  srv->collective_block(sumi::collective::barrier, 0);
+  srv->collective_block(::sumi::collective::barrier, 0);
   debug("running distributed service %s on rank %d", libname_.c_str(), srv->rank());
   srv->run();
   srv->barrier(1);
-  srv->collective_block(sumi::collective::barrier, 1);
+  srv->collective_block(::sumi::collective::barrier, 1);
   debug("finalizing distributed service %s on rank %d", libname_.c_str(), srv->rank());
   srv->finish();
   delete srv;
   return 0;
 }
 
-sumi::message*
+::sumi::deprecated::message*
 distributed_service::poll_for_message(bool blocking)
 {
-  sumi::message* msg = poll(blocking);
-  if (msg && msg->class_type() == sumi::message::bcast){
-    auto smsg = dynamic_cast<sumi::system_bcast_message*>(msg);
-    if (smsg->action() == sumi::system_bcast_message::shutdown){
+  ::sumi::deprecated::message* msg = poll(blocking);
+  if (msg && msg->class_type() == ::sumi::deprecated::message::bcast){
+    auto smsg = dynamic_cast<::sumi::deprecated::system_bcast_message*>(msg);
+    if (smsg->action() == ::sumi::deprecated::system_bcast_message::shutdown){
       terminated_ = true;
       return nullptr;
     }

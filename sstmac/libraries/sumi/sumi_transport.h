@@ -1,18 +1,18 @@
 /**
-Copyright 2009-2018 National Technology and Engineering Solutions of Sandia, 
-LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government 
+Copyright 2009-2018 National Technology and Engineering Solutions of Sandia,
+LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government
 retains certain rights in this software.
 
 Sandia National Laboratories is a multimission laboratory managed and operated
-by National Technology and Engineering Solutions of Sandia, LLC., a wholly 
-owned subsidiary of Honeywell International, Inc., for the U.S. Department of 
+by National Technology and Engineering Solutions of Sandia, LLC., a wholly
+owned subsidiary of Honeywell International, Inc., for the U.S. Department of
 Energy's National Nuclear Security Administration under contract DE-NA0003525.
 
 Copyright (c) 2009-2018, NTESS
 
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification, 
+Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
     * Redistributions of source code must retain the above copyright
@@ -46,18 +46,16 @@ Questions? Contact sst-macro-help@sandia.gov
 #define sumi_SUMI_TRANSPORT_H
 
 #include <sstmac/common/stats/stat_spyplot_fwd.h>
+#include <sstmac/hardware/network/network_message_fwd.h>
 #include <sstmac/libraries/sumi/message_fwd.h>
-#include <sstmac/libraries/sumi/message_fwd.h>
+#include <sstmac/software/api/api.h>
 #include <sstmac/software/launch/job_launcher_fwd.h>
 #include <sstmac/software/libraries/service.h>
-#include <sstmac/software/api/api.h>
-#include <sstmac/hardware/network/network_message_fwd.h>
-#include <sumi/message_fwd.h>
-#include <sumi/message_fwd.h>
+#include <sstmac/software/process/key.h>
 #include <sumi/collective.h>
 #include <sumi/comm_functions.h>
+#include <sumi/message_fwd.h>
 #include <sumi/transport.h>
-#include <sstmac/software/process/key.h>
 
 /**
  * SUMI = Simulator unified messagine interface
@@ -65,47 +63,34 @@ Questions? Contact sst-macro-help@sandia.gov
  * i.e. the substrate for sending messages!
  */
 namespace sstmac {
+namespace sumi {
 
-class sumi_transport :
-  public sstmac::sw::api,
-  public sumi::transport
-{
-  RegisterAPI("sumi_transport", sumi_transport)
+class transport : public sstmac::sw::api, public ::sumi::deprecated::transport {
+  RegisterAPI("transport", transport);
 
- public:  
-  sumi_transport(sprockit::sim_parameters* params,
-                 sstmac::sw::software_id sid,
-                 sstmac::sw::operating_system* os);
+ public:
+  transport(sprockit::sim_parameters* params, sstmac::sw::software_id sid,
+            sstmac::sw::operating_system* os);
 
   virtual void init() override;
 
   virtual void finish() override;
 
-  virtual ~sumi_transport();
+  virtual ~transport();
 
-  int pt2pt_cq_id() const {
-    return pt2pt_cq_id_;
-  }
+  int pt2pt_cq_id() const { return pt2pt_cq_id_; }
 
-  int collective_cq_id() const {
-    return collective_cq_id_;
-  }
+  int collective_cq_id() const { return collective_cq_id_; }
 
-  void incoming_event(event *ev) override;
+  void incoming_event(event* ev) override;
 
   void compute(timestamp t);
 
-  void client_server_send(
-    int dest_rank,
-    node_id dest_node,
-    int dest_app,
-    sumi::message* msg);
+  void client_server_send(int dest_rank, node_id dest_node, int dest_app,
+                          ::sumi::deprecated::message* msg);
 
-  void client_server_rdma_put(
-    int dest_rank,
-    node_id dest_node,
-    int dest_app,
-    sumi::message* msg);
+  void client_server_rdma_put(int dest_rank, node_id dest_node, int dest_app,
+                              ::sumi::deprecated::message* msg);
 
   /**
    * Block on a collective of a particular type and tag
@@ -114,31 +99,32 @@ class sumi_transport :
    * @param tag
    * @return
    */
-  sumi::collective_done_message* collective_block(
-      sumi::collective::type_t ty, int tag, int cq_id = 0) override;
+  ::sumi::deprecated::collective_done_message* collective_block(
+      ::sumi::collective::type_t ty, int tag, int cq_id = 0) override;
 
   double wall_time() const override;
 
-  sumi::transport_message* poll_pending_messages(bool blocking, double timeout = -1) override;
+  ::sumi::deprecated::transport_message* poll_pending_messages(
+      bool blocking, double timeout = -1) override;
 
   /**
-   * @brief send Intra-app. Send within the same process launch (i.e. intra-comm MPI_COMM_WORLD). This contrasts
-   *  with client_server_send which exchanges messages between different apps
+   * @brief send Intra-app. Send within the same process launch (i.e. intra-comm
+   * MPI_COMM_WORLD). This contrasts with client_server_send which exchanges
+   * messages between different apps
    * @param byte_length
    * @param msg
    * @param ty
    * @param dst
    * @param needs_ack
    */
-  void send(uint64_t byte_length, sumi::message* msg, int ty, int dst);
+  void send(uint64_t byte_length, ::sumi::deprecated::message* msg, int ty,
+            int dst);
 
   void incoming_message(transport_message* msg);
 
   void shutdown_server(int dest_rank, node_id dest_node, int dest_app);
 
-  std::string server_libname() const {
-    return server_libname_;
-  }
+  std::string server_libname() const { return server_libname_; }
 
   event_scheduler* des_scheduler() const;
 
@@ -147,13 +133,13 @@ class sumi_transport :
   void pin_rdma(uint64_t bytes);
 
  private:
-  void do_smsg_send(int dst, sumi::message* msg) override;
+  void do_smsg_send(int dst, ::sumi::deprecated::message* msg) override;
 
-  void do_rdma_put(int dst, sumi::message* msg) override;
+  void do_rdma_put(int dst, ::sumi::deprecated::message* msg) override;
 
-  void do_rdma_get(int src, sumi::message* msg) override;
+  void do_rdma_get(int src, ::sumi::deprecated::message* msg) override;
 
-  void do_nvram_get(int src, sumi::message* msg) override;
+  void do_nvram_get(int src, ::sumi::deprecated::message* msg) override;
 
   void send_terminate(int dst) override;
 
@@ -161,51 +147,214 @@ class sumi_transport :
 
   void go_revive() override;
 
- protected:
-  sumi_transport(sprockit::sim_parameters* params,
-                 const char* prefix,
-                 sstmac::sw::software_id sid,
-                 sstmac::sw::operating_system* os);
+ public:
+  transport(sprockit::sim_parameters* params, const char* prefix,
+            sstmac::sw::software_id sid, sstmac::sw::operating_system* os);
 
   /**
-   * @brief sumi_transport Ctor with strict library name. We do not create a server here.
-   * Since this has been explicitly named, messages will be directly to a named library.
+   * @brief transport Ctor with strict library name. We do not create a server
+   * here. Since this has been explicitly named, messages will be directly to a
+   * named library.
    * @param params
    * @param libname
    * @param sid
    * @param os
    */
-  sumi_transport(sprockit::sim_parameters* params,
-                 const std::string& libname,
-                 sstmac::sw::software_id sid,
-                 sstmac::sw::operating_system* os);
+  transport(sprockit::sim_parameters* params, const std::string& libname,
+            sstmac::sw::software_id sid, sstmac::sw::operating_system* os);
 
-  sumi::public_buffer make_public_buffer(void* buffer, int size) override {
+  ::sumi::public_buffer make_public_buffer(void* buffer, int size) override {
     pin_rdma(size);
-    return sumi::public_buffer(buffer);
+    return ::sumi::public_buffer(buffer);
   }
 
-  void unmake_public_buffer(sumi::public_buffer buf, int size) override {}
+  void unmake_public_buffer(::sumi::public_buffer buf, int size) override {}
 
-  void free_public_buffer(sumi::public_buffer buf, int size) override {
+  void free_public_buffer(::sumi::public_buffer buf, int size) override {
     ::free(buf.ptr);
   }
 
   int* nidlist() const override;
 
+  //
+  // Functions that use to be in sumi::transport
+  //
+
+  /**
+   * The total size of the input/result buffer in bytes is nelems*type_size
+   * This always run in a fault-tolerant fashion
+   * This uses a dynamic tree structure that reconnects partners when failures
+   * are detected
+   * @param vote The vote (currently restricted to integer) from this process
+   * @param nelems The number of elements in the input and result buffer.
+   * @param tag A unique tag identifier for the collective
+   * @param fxn The function that merges vote, usually AND, OR, MAX, MIN
+   * @param context The context (i.e. initial set of failed procs)
+   */
+  void dynamic_tree_vote(
+      int vote, int tag, ::sumi::vote_fxn fxn,
+      ::sumi::collective::config cfg = ::sumi::collective::cfg());
+
+  /**
+   * The total size of the input/result buffer in bytes is nelems*type_size
+   * @param dst  Buffer for the result. Can be NULL to ignore payloads.
+   * @param src  Buffer for the input. Can be NULL to ignore payloads.
+   *             Automatically memcpy from src to dst.
+   * @param nelems The number of elements in the input and result buffer.
+   * @param type_size The size of the input type, i.e. sizeof(int),
+   * sizeof(double)
+   * @param tag A unique tag identifier for the collective
+   * @param fxn The function that will actually perform the reduction
+   * @param fault_aware Whether to execute in a fault-aware fashion to detect
+   * failures
+   * @param context The context (i.e. initial set of failed procs)
+   */
+  void allreduce(void* dst, void* src, int nelems, int type_size, int tag,
+                 ::sumi::reduce_fxn fxn,
+                 ::sumi::collective::config cfg = ::sumi::collective::cfg());
+
+  /**
+   * The total size of the input buffer in bytes is nelems*type_size*comm_size
+   * @param dst  Buffer for the result. Can be NULL to ignore payloads.
+   * @param src  Buffer for the input. Can be NULL to ignore payloads.
+   *             Automatically memcpy from src to dst.
+   * @param nelems The number of elements in the result buffer at the end
+   * @param type_size The size of the input type, i.e. sizeof(int),
+   * sizeof(double)
+   * @param tag A unique tag identifier for the collective
+   * @param fxn The function that will actually perform the reduction
+   * @param fault_aware Whether to execute in a fault-aware fashion to detect
+   * failures
+   * @param context The context (i.e. initial set of failed procs)
+   */
+  void reduce_scatter(
+      void* dst, void* src, int nelems, int type_size, int tag,
+      ::sumi::reduce_fxn fxn,
+      ::sumi::collective::config cfg = ::sumi::collective::cfg());
+
+  template <typename data_t, template <typename> class Op>
+  void reduce_scatter(
+      void* dst, void* src, int nelems, int tag,
+      ::sumi::collective::config cfg = ::sumi::collective::cfg()) {
+    typedef ::sumi::ReduceOp<Op, data_t> op_class_type;
+    reduce_scatter(dst, src, nelems, sizeof(data_t), tag, &op_class_type::op,
+                   cfg);
+  }
+
+  /**
+   * The total size of the input/result buffer in bytes is nelems*type_size
+   * @param dst  Buffer for the result. Can be NULL to ignore payloads.
+   * @param src  Buffer for the input. Can be NULL to ignore payloads.
+   *             Automatically memcpy from src to dst.
+   * @param nelems The number of elements in the input and result buffer.
+   * @param type_size The size of the input type, i.e. sizeof(int),
+   * sizeof(double)
+   * @param tag A unique tag identifier for the collective
+   * @param fxn The function that will actually perform the reduction
+   * @param fault_aware Whether to execute in a fault-aware fashion to detect
+   * failures
+   * @param context The context (i.e. initial set of failed procs)
+   */
+  void scan(void* dst, void* src, int nelems, int type_size, int tag,
+            ::sumi::reduce_fxn fxn,
+            ::sumi::collective::config cfg = ::sumi::collective::cfg());
+
+  template <typename data_t, template <typename> class Op>
+  void scan(void* dst, void* src, int nelems, int tag,
+            ::sumi::collective::config cfg = ::sumi::collective::cfg()) {
+    typedef ::sumi::ReduceOp<Op, data_t> op_class_type;
+    scan(dst, src, nelems, sizeof(data_t), tag, &op_class_type::op, cfg);
+  }
+
+  virtual void reduce(
+      int root, void* dst, void* src, int nelems, int type_size, int tag,
+      ::sumi::reduce_fxn fxn,
+      ::sumi::collective::config cfg = ::sumi::collective::cfg());
+
+  template <typename data_t, template <typename> class Op>
+  void reduce(int root, void* dst, void* src, int nelems, int tag,
+              ::sumi::collective::config cfg = ::sumi::collective::cfg()) {
+    typedef ::sumi::ReduceOp<Op, data_t> op_class_type;
+    reduce(root, dst, src, nelems, sizeof(data_t), tag, &op_class_type::op,
+           cfg);
+  }
+
+  void bcast(int root, void* buf, int nelems, int type_size, int tag,
+             ::sumi::collective::config cfg = ::sumi::collective::cfg());
+
+  void gatherv(int root, void* dst, void* src, int sendcnt, int* recv_counts,
+               int type_size, int tag,
+               ::sumi::collective::config = ::sumi::collective::cfg());
+
+  void gather(int root, void* dst, void* src, int nelems, int type_size,
+              int tag, ::sumi::collective::config = ::sumi::collective::cfg());
+
+  void scatter(int root, void* dst, void* src, int nelems, int type_size,
+               int tag, ::sumi::collective::config = ::sumi::collective::cfg());
+
+  void scatterv(int root, void* dst, void* src, int* send_counts, int recvcnt,
+                int type_size, int tag,
+                ::sumi::collective::config = ::sumi::collective::cfg());
+
+  /**
+   * The total size of the input/result buffer in bytes is nelems*type_size
+   * @param dst  Buffer for the result. Can be NULL to ignore payloads.
+   * @param src  Buffer for the input. Can be NULL to ignore payloads. This need
+   * not be public! Automatically memcpy from src to public facing dst.
+   * @param nelems The number of elements in the input and result buffer.
+   * @param type_size The size of the input type, i.e. sizeof(int),
+   * sizeof(double)
+   * @param tag A unique tag identifier for the collective
+   * @param fault_aware Whether to execute in a fault-aware fashion to detect
+   * failures
+   * @param context The context (i.e. initial set of failed procs)
+   */
+  void allgather(void* dst, void* src, int nelems, int type_size, int tag,
+                 ::sumi::collective::config = ::sumi::collective::cfg());
+
+  void allgatherv(void* dst, void* src, int* recv_counts, int type_size,
+                  int tag,
+                  ::sumi::collective::config = ::sumi::collective::cfg());
+
+  void alltoall(void* dst, void* src, int nelems, int type_size, int tag,
+                ::sumi::collective::config = ::sumi::collective::cfg());
+
+  void alltoallv(void* dst, void* src, int* send_counts, int* recv_counts,
+                 int type_size, int tag,
+                 ::sumi::collective::config = ::sumi::collective::cfg());
+
+  /**
+   * Essentially just executes a zero-byte allgather.
+   * @param tag
+   * @param fault_aware
+   */
+  void barrier(int tag, ::sumi::collective::config = ::sumi::collective::cfg());
+
+  void wait_barrier(int tag);
+
  private:
-  void send(uint64_t byte_length,
-    int dest_rank,
-    node_id dest_node,
-    int dest_app,
-    sumi::message* msg,
-    int ty);
+  static ::sumi::collective_algorithm_selector* allgather_selector_;
+  static ::sumi::collective_algorithm_selector* alltoall_selector_;
+  static ::sumi::collective_algorithm_selector* alltoallv_selector_;
+  static ::sumi::collective_algorithm_selector* allreduce_selector_;
+  static ::sumi::collective_algorithm_selector* reduce_scatter_selector_;
+  static ::sumi::collective_algorithm_selector* scan_selector_;
+  static ::sumi::collective_algorithm_selector* allgatherv_selector_;
+  static ::sumi::collective_algorithm_selector* bcast_selector_;
+  static ::sumi::collective_algorithm_selector* gather_selector_;
+  static ::sumi::collective_algorithm_selector* gatherv_selector_;
+  static ::sumi::collective_algorithm_selector* reduce_selector_;
+  static ::sumi::collective_algorithm_selector* scatter_selector_;
+  static ::sumi::collective_algorithm_selector* scatterv_selector_;
+
+  void send(uint64_t byte_length, int dest_rank, node_id dest_node,
+            int dest_app, ::sumi::deprecated::message* msg, int ty);
 
   void process(sstmac::transport_message* msg);
 
   void ctor_common(sstmac::sw::software_id sid);
 
-  static sstmac::sw::ftq_tag sumi_transport_tag;
+  static sstmac::sw::ftq_tag transport_tag;
   static sstmac::sw::ftq_tag poll_delay_tag;
 
   std::string server_libname_;
@@ -248,9 +397,9 @@ class sumi_transport :
 
   void schedule_next_heartbeat() override;
 #endif
-
 };
 
-}
+}  // namespace sumi
+}  // namespace sstmac
 
-#endif // sumi_SUMI_TRANSPORT_H
+#endif  // sumi_SUMI_TRANSPORT_H

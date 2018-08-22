@@ -51,7 +51,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/software/process/thread.h>
 #include <sstmac/libraries/sumi/sumi.h>
 #include <sumi/dense_rank_map.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sstmac/skeleton.h>
 #define sstmac_app_name user_app_cxx
 using namespace sumi;

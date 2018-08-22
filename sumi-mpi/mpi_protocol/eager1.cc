@@ -70,7 +70,7 @@ eager1::send_header(mpi_queue* queue,
   SSTMACBacktrace(MPIEager1Protocol_Send_RDMA_Header);
   msg->set_content_type(mpi_message::header);
 
-  queue->post_header(msg, sumi::message::header, false/*the send is "done" - no need to ack*/);
+  queue->post_header(msg, sumi::deprecated::message::header, false/*the send is "done" - no need to ack*/);
 
   /** the send will have copied into a temp buffer so we can 'ack' the buffer for now */
   mpi_queue::send_needs_ack_t::iterator it, end =

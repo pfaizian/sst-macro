@@ -84,7 +84,7 @@ using sstmac::sw::software_id;
 using sstmac::sw::operating_system;
 
 class mpi_api :
-  public sstmac::sumi_transport
+  public sstmac::sumi::transport
 {
   RegisterAPI("mpi", mpi_api)
 

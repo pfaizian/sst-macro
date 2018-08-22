@@ -231,10 +231,10 @@ class collective_actor
 
   std::string rank_str() const;
 
-  void init(transport* my_api, int tag, const collective::config& cfg);
+  void init(::sstmac::sumi::transport* my_api, int tag, const collective::config& cfg);
 
  protected:
-  collective_actor(transport* my_api, int tag, const collective::config& cfg);
+  collective_actor(::sstmac::sumi::transport* my_api, int tag, const collective::config& cfg);
 
   collective_actor(){} //will be initialized later
 
@@ -260,7 +260,7 @@ class collective_actor
   virtual void finalize(){}
 
  protected:
-  transport* my_api_;
+  ::sstmac::sumi::transport* my_api_;
 
   int dense_me_;
 
@@ -434,7 +434,7 @@ class dag_collective_actor :
 
   virtual ~dag_collective_actor();
 
-  virtual void recv(collective_work_message* msg);
+  virtual void recv(::sumi::deprecated::collective_work_message* msg);
 
   virtual void start();
 
@@ -448,7 +448,7 @@ class dag_collective_actor :
   void deadlock_check() const;
 
   void init(collective::type_t type,
-    transport* my_api, int nelems,
+    ::sstmac::sumi::transport* my_api, int nelems,
     int type_size, int tag,
     const collective::config& cfg){
     collective_actor::init(my_api, tag, cfg);
@@ -470,8 +470,8 @@ class dag_collective_actor :
                    alloc<uint32_t,action*>> active_map;
   typedef std::multimap<uint32_t, action*, std::less<uint32_t>,
                    alloc<uint32_t,action*>> pending_map;
-  typedef std::multimap<uint32_t, collective_work_message*, std::less<uint32_t>,
-                   alloc<uint32_t,collective_work_message*>> pending_msg_map;
+  typedef std::multimap<uint32_t, ::sumi::deprecated::collective_work_message*, std::less<uint32_t>,
+                   alloc<uint32_t, ::sumi::deprecated::collective_work_message*>> pending_msg_map;
 
  protected:
   dag_collective_actor() :
@@ -509,7 +509,7 @@ class dag_collective_actor :
   void start_recv_nack_instead(action* ac);
   void do_send(action* ac);
   void do_recv(action* ac);
-  void send_failure_message(action* ac, collective_work_message::action_t ty);
+  void send_failure_message(action* ac, ::sumi::deprecated::collective_work_message::action_t ty);
 
   void start_action(action* ac);
 
@@ -518,24 +518,24 @@ class dag_collective_actor :
   void send_rdma_get_header(action* ac);
 
   void next_round_ready_to_put(action* ac,
-    collective_work_message* header);
+    ::sumi::deprecated::collective_work_message* header);
 
   void next_round_ready_to_get(action* ac,
-    collective_work_message* header);
+    ::sumi::deprecated::collective_work_message* header);
 
-  void incoming_recv_message(action* ac, collective_work_message* msg);
+  void incoming_recv_message(action* ac, ::sumi::deprecated::collective_work_message* msg);
 
-  void incoming_send_message(action* ac, collective_work_message* msg);
+  void incoming_send_message(action* ac, ::sumi::deprecated::collective_work_message* msg);
 
-  void incoming_message(collective_work_message* msg);
+  void incoming_message(::sumi::deprecated::collective_work_message* msg);
 
-  void incoming_nack(action::type_t ty, collective_work_message* msg);
+  void incoming_nack(action::type_t ty, ::sumi::deprecated::collective_work_message* msg);
 
-  void data_recved(collective_work_message* msg, void* recvd_buffer);
+  void data_recved(::sumi::deprecated::collective_work_message* msg, void* recvd_buffer);
 
-  void data_recved(action* ac, collective_work_message* msg, void *recvd_buffer);
+  void data_recved(action* ac, ::sumi::deprecated::collective_work_message* msg, void *recvd_buffer);
 
-  void data_sent(collective_work_message* msg);
+  void data_sent(::sumi::deprecated::collective_work_message* msg);
 
   virtual void buffer_action(void* dst_buffer, void* msg_buffer, action* ac) = 0;
 
@@ -551,9 +551,9 @@ class dag_collective_actor :
 
   void set_recv_buffer(action* ac, public_buffer& buf);
 
-  collective_work_message* new_message(action* ac, collective_work_message::action_t act);
+  ::sumi::deprecated::collective_work_message* new_message(action* ac, ::sumi::deprecated::collective_work_message::action_t act);
 
-  collective_done_message* done_msg() const;
+  ::sumi::deprecated::collective_done_message* done_msg() const;
 
   virtual void start_shuffle(action* ac);
 

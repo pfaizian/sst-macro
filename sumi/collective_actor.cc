@@ -44,8 +44,8 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include <sumi/collective_actor.h>
 #include <sumi/partner_timeout.h>
-#include <sumi/transport.h>
 #include <sumi/ping.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sumi/communicator.h>
 #include <sprockit/output.h>
 #include <cstring>
@@ -100,7 +100,7 @@ debug_print(const char* info, const std::string& rank_str,
 }
 
 void
-collective_actor::init(transport *my_api, int tag, const collective::config& cfg)
+collective_actor::init(::sstmac::sumi::transport *my_api, int tag, const collective::config& cfg)
 {
 #ifdef FEATURE_TAG_SUMI_RESILIENCE
   rank_map_.init(my_api->failed_ranks(context), dom);
@@ -113,7 +113,7 @@ collective_actor::init(transport *my_api, int tag, const collective::config& cfg
   dense_me_ = rank_map_.dense_rank(cfg_.dom->my_comm_rank());
 }
 
-collective_actor::collective_actor(transport* my_api, int tag, const collective::config& cfg)
+collective_actor::collective_actor(::sstmac::sumi::transport* my_api, int tag, const collective::config& cfg)
 {
   init(my_api, tag, cfg);
 #ifdef FEATURE_TAG_SUMI_RESILIENCE
@@ -316,8 +316,8 @@ dag_collective_actor::comm_action_done(action* ac)
 void
 dag_collective_actor::send_eager_message(action* ac)
 {
-  collective_work_message* msg = new_message(
-        ac, collective_work_message::eager_payload);
+  ::sumi::deprecated::collective_work_message* msg = new_message(
+        ac, ::sumi::deprecated::collective_work_message::eager_payload);
 #if SSTMAC_COMM_SYNC_STATS
   msg->set_time_sent(my_api_->wall_time());
 #endif
@@ -334,16 +334,16 @@ dag_collective_actor::send_eager_message(action* ac)
 
   //okay, this is dangerous, but for now have both send/recv acks
   //delivered on the same completion queues
-  my_api_->smsg_send(ac->phys_partner, message::eager_payload, msg,
-                     message::no_ack, cfg_.cq_id); //do not ack the send
+  my_api_->smsg_send(ac->phys_partner, ::sumi::deprecated::message::eager_payload, msg,
+                    ::sumi::deprecated::message::no_ack, cfg_.cq_id); //do not ack the send
   comm_action_done(ac);
 }
 
 void
 dag_collective_actor::send_rdma_put_header(action* ac)
 {
-  collective_work_message* msg = new_message(
-                        ac, collective_work_message::rdma_put_header);
+  ::sumi::deprecated::collective_work_message* msg = new_message(
+                        ac, ::sumi::deprecated::collective_work_message::rdma_put_header);
 #if SSTMAC_COMM_SYNC_STATS
   msg->set_time_sent(my_api_->wall_time());
 #endif
@@ -355,14 +355,14 @@ dag_collective_actor::send_rdma_put_header(action* ac)
    ac->round, tag_,
    msg->remote_buffer().ptr, ac->offset, recv_buffer_.ptr);
 
-  my_api_->send_header(ac->phys_partner, msg, message::no_ack, cfg_.cq_id);
+  my_api_->send_header(ac->phys_partner, msg, ::sumi::deprecated::message::no_ack, cfg_.cq_id);
 }
 
 void
 dag_collective_actor::send_rdma_get_header(action* ac)
 {
-  collective_work_message* msg = new_message(
-        ac, collective_work_message::rdma_get_header);
+  ::sumi::deprecated::collective_work_message* msg = new_message(
+        ac, ::sumi::deprecated::collective_work_message::rdma_get_header);
 
 #if SSTMAC_COMM_SYNC_STATS
   msg->set_time_sent(my_api_->wall_time());
@@ -378,7 +378,7 @@ dag_collective_actor::send_rdma_get_header(action* ac)
    ac->offset, send_buffer_.ptr);
 
   int dst = dense_to_global_dst(ac->partner);
-  my_api_->send_header(dst, msg, message::no_ack, cfg_.cq_id);
+  my_api_->send_header(dst, msg, ::sumi::deprecated::message::no_ack, cfg_.cq_id);
 }
 
 
@@ -538,10 +538,10 @@ dag_collective_actor::start_send_nack_instead(action* ac)
   protocol_t pr = protocol_for_action(ac);
   switch(pr){
     case eager_protocol:
-      send_failure_message(ac, collective_work_message::nack_eager);
+      send_failure_message(ac, ::sumi::deprecated::collective_work_message::nack_eager);
       break;
     case get_protocol:
-      send_failure_message(ac, collective_work_message::nack_get_header);
+      send_failure_message(ac, ::sumi::deprecated::collective_work_message::nack_get_header);
       break;
     case put_protocol:
       break;
@@ -634,14 +634,14 @@ dag_collective_actor::start_recv_nack_instead(action* ac)
     case get_protocol:
       break; //do nothing
     case put_protocol:
-      send_failure_message(ac, collective_work_message::nack_put_header);
+      send_failure_message(ac, ::sumi::deprecated::collective_work_message::nack_put_header);
       break;
   }
 }
 
 void
 dag_collective_actor::send_failure_message(
-  action* ac, collective_work_message::action_t ty)
+  action* ac, ::sumi::deprecated::collective_work_message::action_t ty)
 {
   //don't actually need to send this - he's already dead!
   if (is_failed(ac->partner))
@@ -650,7 +650,7 @@ dag_collective_actor::send_failure_message(
   void* no_buffer = nullptr;
   int no_elems = 0;
   //send a failure message to the neighbor letting him know to abandon the collective
-  auto msg = new collective_work_message(
+  auto msg = new ::sumi::deprecated::collective_work_message(
                     type_, ty,
                     no_elems, tag_,
                     ac->round, dense_me_,
@@ -659,26 +659,26 @@ dag_collective_actor::send_failure_message(
   msg->append_failed(failed_ranks_);
 #endif
   int phys_dst =  cfg_.dom->comm_to_global_rank(phys_dst);
-  my_api_->smsg_send(phys_dst, message::header, msg,
-                     message::no_ack, cfg_.cq_id);
+  my_api_->smsg_send(phys_dst, ::sumi::deprecated::message::header, msg,
+                     ::sumi::deprecated::message::no_ack, cfg_.cq_id);
 }
 
 void
 dag_collective_actor::reput_pending(uint32_t id, pending_msg_map& pending)
 {
-  std::list<collective_work_message*> tmp;
+  std::list<::sumi::deprecated::collective_work_message*> tmp;
 
   {pending_msg_map::iterator it = pending.find(id);
   while (it != pending.end()){
-    collective_work_message* msg = it->second;
+    ::sumi::deprecated::collective_work_message* msg = it->second;
     tmp.push_back(msg);
     pending.erase(it);
     it = pending.find(id);
   }}
 
-  {std::list<collective_work_message*>::iterator it, end = tmp.end();
+  {std::list<::sumi::deprecated::collective_work_message*>::iterator it, end = tmp.end();
   for (it=tmp.begin(); it != end; ++it){
-    collective_work_message* msg = *it;
+    ::sumi::deprecated::collective_work_message* msg = *it;
     incoming_message(msg);
   }}
 }
@@ -714,7 +714,7 @@ dag_collective_actor::comm_action_done(action::type_t ty, int round, int partner
 }
 
 void
-dag_collective_actor::data_sent(collective_work_message* msg)
+dag_collective_actor::data_sent(::sumi::deprecated::collective_work_message* msg)
 {
   action* ac = comm_action_done(action::send, msg->round(), msg->dense_recver());
 #if SSTMAC_COMM_SYNC_STATS
@@ -723,7 +723,7 @@ dag_collective_actor::data_sent(collective_work_message* msg)
 }
 
 void
-dag_collective_actor::incoming_nack(action::type_t ty, collective_work_message* msg)
+dag_collective_actor::incoming_nack(action::type_t ty, ::sumi::deprecated::collective_work_message* msg)
 {
 #ifdef FEATURE_TAG_SUMI_RESILIENCE
   const std::set<int>& failed = msg->failed_procs();
@@ -734,7 +734,7 @@ dag_collective_actor::incoming_nack(action::type_t ty, collective_work_message* 
 }
 
 void
-dag_collective_actor::data_recved(action* ac_, collective_work_message* msg, void *recvd_buffer)
+dag_collective_actor::data_recved(action* ac_, ::sumi::deprecated::collective_work_message* msg, void *recvd_buffer)
 {
 #if SSTMAC_COMM_SYNC_STATS
   my_api_->collect_sync_delays(0,msg);
@@ -766,7 +766,7 @@ dag_collective_actor::data_recved(action* ac_, collective_work_message* msg, voi
         */
 
       recv_action::recv_type_t recv_ty = recv_action::recv_type(
-            msg->payload_type() == message::eager_payload, ac->buf_type);
+            msg->payload_type() == ::sumi::deprecated::message::eager_payload, ac->buf_type);
 
       //printf("%d %d -> %d\n",
       //       msg->payload_type() == message::eager_payload,
@@ -809,7 +809,7 @@ dag_collective_actor::data_recved(action* ac_, collective_work_message* msg, voi
 
 void
 dag_collective_actor::data_recved(
-  collective_work_message* msg,
+  ::sumi::deprecated::collective_work_message* msg,
   void* recvd_buffer)
 {
   debug_printf(sumi_collective | sumi_collective_round | sumi_collective_sendrecv,
@@ -869,32 +869,32 @@ dag_collective_actor::set_send_buffer(action* ac_, public_buffer& send_buf)
   return nbytes;
 }
 
-collective_work_message*
-dag_collective_actor::new_message(action* ac, collective_work_message::action_t act)
+::sumi::deprecated::collective_work_message*
+dag_collective_actor::new_message(action* ac, ::sumi::deprecated::collective_work_message::action_t act)
 {
-  auto msg = new collective_work_message(
+  auto msg = new ::sumi::deprecated::collective_work_message(
     type_, act,
     tag_,
     ac->round, dense_me_,
     ac->partner);
 
   switch(act){
-    case collective_work_message::eager_payload: {
+    case ::sumi::deprecated::collective_work_message::eager_payload: {
       size_t nbytes = set_send_buffer(ac, msg->local_buffer());
       msg->set_byte_length(nbytes);
       break;
     }
-    case collective_work_message::rdma_get_header: {
+    case ::sumi::deprecated::collective_work_message::rdma_get_header: {
       size_t nbytes = set_send_buffer(ac, msg->remote_buffer());
       msg->set_byte_length(nbytes);
       break;
     }
-    case collective_work_message::rdma_put_header:
+    case ::sumi::deprecated::collective_work_message::rdma_put_header:
       set_recv_buffer(ac, msg->remote_buffer());
       break;
     default:
     spkt_abort_printf("collective_actor::new message: created with invalid type %s",
-               collective_work_message::tostr(act));
+               ::sumi::deprecated::collective_work_message::tostr(act));
   }
   return msg;
 }
@@ -902,7 +902,7 @@ dag_collective_actor::new_message(action* ac, collective_work_message::action_t 
 void
 dag_collective_actor::next_round_ready_to_put(
   action* ac,
-  collective_work_message* header)
+  ::sumi::deprecated::collective_work_message* header)
 {
   debug_printf(sumi_collective | sumi_collective_sendrecv | sumi_collective_round,
     "Rank %s, collective %s ready to put for round=%d tag=%d from rank %d(%d)",
@@ -911,11 +911,11 @@ dag_collective_actor::next_round_ready_to_put(
     header->dense_sender(), header->sender());
 
   if (failed()){
-    send_failure_message(ac, collective_work_message::nack_put_payload);
+    send_failure_message(ac, ::sumi::deprecated::collective_work_message::nack_put_payload);
     comm_action_done(ac);
   } else {
     //reuse the header and send it back
-    header->set_action(collective_work_message::put_data);
+    header->set_action(::sumi::deprecated::collective_work_message::put_data);
     header->reverse();
     size_t size = set_send_buffer(ac, header->local_buffer());
     header->set_byte_length(size);
@@ -936,7 +936,7 @@ dag_collective_actor::next_round_ready_to_put(
 void
 dag_collective_actor::next_round_ready_to_get(
   action* ac,
-  collective_work_message* header)
+  ::sumi::deprecated::collective_work_message* header)
 {
   debug_printf(sumi_collective | sumi_collective_sendrecv | sumi_collective_round,
     "Rank %s, collective %s received get header %p for round=%d tag=%d from rank %d",
@@ -944,11 +944,11 @@ dag_collective_actor::next_round_ready_to_get(
     header, header->round(), tag_, header->sender());
 
   if (failed()){
-    send_failure_message(ac, collective_work_message::nack_get_ack);
+    send_failure_message(ac, ::sumi::deprecated::collective_work_message::nack_get_ack);
     comm_action_done(ac);
   } else {
     //reuse the header and send it back
-    header->set_action(collective_work_message::get_data);
+    header->set_action(::sumi::deprecated::collective_work_message::get_data);
     set_recv_buffer(ac, header->local_buffer());
 
     debug_printf(sumi_collective | sumi_collective_sendrecv,
@@ -980,72 +980,72 @@ dag_collective_actor::next_round_ready_to_get(
 }
 
 void
-dag_collective_actor::incoming_recv_message(action* ac, collective_work_message* msg)
+dag_collective_actor::incoming_recv_message(action* ac, ::sumi::deprecated::collective_work_message* msg)
 {
   switch(msg->action())
   {
-  case collective_work_message::rdma_get_header:
+  case ::sumi::deprecated::collective_work_message::rdma_get_header:
     next_round_ready_to_get(ac, msg);
     break;
-  case collective_work_message::eager_payload:
+  case ::sumi::deprecated::collective_work_message::eager_payload:
     //data recved will clear the actions
     data_recved(ac, msg, msg->eager_buffer());
     delete msg;
     break;
 #ifdef FEATURE_TAG_SUMI_RESILIENCE
-  case collective_work_message::nack_get_header:
-  case collective_work_message::nack_eager:
+  case ::sumi::deprecated::collective_work_message::nack_get_header:
+  case ::sumi::deprecated::collective_work_message::nack_eager:
     failed_ranks_.insert_all(msg->failed_procs());
     comm_action_done(ac);
     break;
 #endif
   default:
     spkt_throw_printf(sprockit::value_error,
-     "invalid recv action %s", collective_work_message::tostr(msg->action()));
+     "invalid recv action %s", ::sumi::deprecated::collective_work_message::tostr(msg->action()));
   }
 }
 
 void
-dag_collective_actor::incoming_send_message(action* ac, collective_work_message* msg)
+dag_collective_actor::incoming_send_message(action* ac, ::sumi::deprecated::collective_work_message* msg)
 {
   switch(msg->action())
   {
-  case collective_work_message::rdma_put_header:
+  case ::sumi::deprecated::collective_work_message::rdma_put_header:
     next_round_ready_to_put(ac, msg);
     break;
 #ifdef FEATURE_TAG_SUMI_RESILIENCE
-  case collective_work_message::nack_put_header:
+  case ::sumi::deprecated::collective_work_message::nack_put_header:
     failed_ranks_.insert_all(msg->failed_procs());
     comm_action_done(ac);
     break;
 #endif
   default:
     spkt_throw_printf(sprockit::value_error,
-     "invalid send action %s", collective_work_message::tostr(msg->action()));
+     "invalid send action %s", ::sumi::deprecated::collective_work_message::tostr(msg->action()));
   }
 
 }
 
 void
-dag_collective_actor::incoming_message(collective_work_message* msg)
+dag_collective_actor::incoming_message(::sumi::deprecated::collective_work_message* msg)
 {
   debug_printf(sumi_collective | sumi_collective_sendrecv,
     "Rank %s on incoming message with action %s from %d on round=%d tag=%d ",
     rank_str().c_str(),
-    collective_work_message::tostr(msg->action()),
+    ::sumi::deprecated::collective_work_message::tostr(msg->action()),
     msg->sender(), msg->round(), tag_);
 
   switch(msg->action())
   {
-  case collective_work_message::nack_get_ack:
+  case ::sumi::deprecated::collective_work_message::nack_get_ack:
     //I told someone to do an RDMA get, but they detected a failure
     //I needed this send ack
     incoming_nack(action::send, msg);
     break;
-  case collective_work_message::rdma_get_header:
-  case collective_work_message::eager_payload:
-  case collective_work_message::nack_get_header:
-  case collective_work_message::nack_eager:
+  case ::sumi::deprecated::collective_work_message::rdma_get_header:
+  case ::sumi::deprecated::collective_work_message::eager_payload:
+  case ::sumi::deprecated::collective_work_message::nack_get_header:
+  case ::sumi::deprecated::collective_work_message::nack_eager:
   {
     uint32_t mid = action::message_id(action::recv, msg->round(), msg->dense_sender());
     active_map::iterator it = active_comms_.find(mid);
@@ -1060,8 +1060,8 @@ dag_collective_actor::incoming_message(collective_work_message* msg)
     }
     break;
   }
-  case collective_work_message::rdma_put_header:
-  case collective_work_message::nack_put_header:
+  case ::sumi::deprecated::collective_work_message::rdma_put_header:
+  case ::sumi::deprecated::collective_work_message::nack_put_header:
   {
     debug_printf(sumi_collective,
        "Rank %s not yet ready for send message from %s on round %d",
@@ -1079,14 +1079,14 @@ dag_collective_actor::incoming_message(collective_work_message* msg)
   default:
     spkt_throw_printf(sprockit::value_error,
         "dag_collective_actor::incoming_message: invalid action %s",
-        collective_work_message::tostr(msg->action()));
+        ::sumi::deprecated::collective_work_message::tostr(msg->action()));
   }
 }
 
-collective_done_message*
+::sumi::deprecated::collective_done_message*
 dag_collective_actor::done_msg() const
 {
-  auto msg = new collective_done_message(tag_, type_, cfg_.dom, cfg_.cq_id);
+  auto msg = new ::sumi::deprecated::collective_done_message(tag_, type_, cfg_.dom, cfg_.cq_id);
   msg->set_comm_rank( cfg_.dom->my_comm_rank());
   msg->set_result(result_buffer_.ptr);
 #ifdef FEATURE_TAG_SUMI_RESILIENCE
@@ -1119,7 +1119,7 @@ dag_collective_actor::put_done_notification()
 }
 
 void
-dag_collective_actor::recv(collective_work_message* msg)
+dag_collective_actor::recv(::sumi::deprecated::collective_work_message* msg)
 {
   if (is_failed(msg->dense_sender())){
     //this is a lingering message that got caught in transit
@@ -1128,38 +1128,38 @@ dag_collective_actor::recv(collective_work_message* msg)
     return;
   }
 
-  message::payload_type_t ty = msg->payload_type();
+  ::sumi::deprecated::message::payload_type_t ty = msg->payload_type();
   switch (ty)
   {
-    case message::rdma_get:
+    case ::sumi::deprecated::message::rdma_get:
       //the recv buffer was the "local" buffer in the RDMA get
       //I got it from someone locally
       data_recved(msg, msg->local_buffer());
       delete msg;
       break;
-    case message::rdma_put:
+    case ::sumi::deprecated::message::rdma_put:
       //the recv buffer the "remote" buffer in the RDMA put
       //some put into me remotely
       data_recved(msg, msg->remote_buffer());
       delete msg;
       break;
-    case message::rdma_get_ack:
-    case message::rdma_put_ack:
+    case ::sumi::deprecated::message::rdma_get_ack:
+    case ::sumi::deprecated::message::rdma_put_ack:
       data_sent(msg);
       delete msg;
       break;
-    case message::rdma_get_nack:
+    case ::sumi::deprecated::message::rdma_get_nack:
       //partner is the sender - I tried and RDMA get but they were dead
       incoming_nack(action::recv, msg);
       break;
-    case message::header:
-    case message::eager_payload:
+    case ::sumi::deprecated::message::header:
+    case ::sumi::deprecated::message::eager_payload:
       incoming_message(msg);
       break;
     default:
       spkt_throw_printf(sprockit::value_error,
         "virtual_dag_collective_actor::recv: invalid message type %s",
-        message::tostr(ty));
+        ::sumi::deprecated::message::tostr(ty));
   }
 }
 
@@ -1223,7 +1223,7 @@ virtual_rank_map::virtual_to_real(int virtual_rank) const
 void*
 dag_collective_actor::message_buffer(void* buffer, int offset)
 {
-  if (isNonNull(buffer)){
+  if (::sumi::deprecated::isNonNull(buffer)){
     int total_stride = type_size_ * offset;
     char* tmp = ((char*)buffer) + total_stride;
     return tmp;

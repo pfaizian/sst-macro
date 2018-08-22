@@ -48,11 +48,13 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <memory>
 
 namespace sumi {
+namespace deprecated {
 
 class collective_work_message;
 
 class collective_done_message;
 
+} // namespace deprecated
 }
 
 #endif // COLLECTIVE_MESSAGE_FWD_H

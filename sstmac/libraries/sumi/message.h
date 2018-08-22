@@ -56,7 +56,7 @@ namespace sstmac {
 
 class transport_message :
   public ::sstmac::hw::network_message,
-  public ::sumi::transport_message,
+  public ::sumi::deprecated::transport_message,
   public ::sstmac::library_interface,
   public sprockit::thread_safe_new<transport_message>
 {
@@ -68,23 +68,23 @@ class transport_message :
   transport_message(
      const std::string& libname,
      sw::app_id aid,
-     sumi::message* msg,
+     sumi::deprecated::message* msg,
      uint64_t byte_length)
    : library_interface(libname),
       network_message(aid, byte_length),
-      sumi::transport_message(msg)
+      sumi::deprecated::transport_message(msg)
   {
   }
 
   virtual void serialize_order(serializer& ser) override;
 
-  sumi::message* take_payload() {
+  sumi::deprecated::message* take_payload() {
     auto ret = payload_;
     payload_ = nullptr;
     return ret;
   }
 
-  sumi::message* get_payload() const {
+  sumi::deprecated::message* get_payload() const {
     return payload_;
   }
 

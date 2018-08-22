@@ -49,7 +49,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/software/process/app.h>
 #include <sstmac/software/process/operating_system.h>
 #include <sstmac/libraries/sumi/sumi_transport.h>
-#include <sumi/transport.h>
+// #include <sumi/transport.h>
 #include <sstmac/skeleton.h>
 #include <sprockit/keyword_registration.h>
 
@@ -64,13 +64,13 @@ MakeDebugSlot(traffic_matrix)
 MakeDebugSlot(traffic_matrix_results)
 
 
-static const int send_cq = sumi::message::no_ack;
+static const int send_cq = ::sumi::deprecated::message::no_ack;
 static const int recv_cq = 0;
 
 class sumi_param_bcaster : public sprockit::param_bcaster
 {
  public:
-  sumi_param_bcaster(sumi::transport* tp) : tport_(tp), tag_(12345) {}
+  sumi_param_bcaster(::sstmac::sumi::transport* tp) : tport_(tp), tag_(12345) {}
 
   void bcast(void *buf, int size, int me, int root){
     tport_->bcast(root, buf, size, sizeof(char), tag_);
@@ -80,14 +80,14 @@ class sumi_param_bcaster : public sprockit::param_bcaster
 
  private:
   int tag_;
-  sumi::transport* tport_;
+  ::sstmac::sumi::transport* tport_;
 };
 
 static const int window_bytes = 262144;
 
 
 class config_message :
-  public sumi::message
+  public ::sumi::deprecated::message
 {
   ImplementSerializable(config_message)
 
@@ -103,7 +103,7 @@ class config_message :
 
   virtual void serialize_order(sstmac::serializer &ser) override {
     ser & recv_buf_;
-    sumi::message::serialize_order(ser);
+    ::sumi::deprecated::message::serialize_order(ser);
   }
 
  private:
@@ -111,7 +111,7 @@ class config_message :
 };
 
 class rdma_message :
-  public sumi::message
+  public ::sumi::deprecated::message
 {
  ImplementSerializable(rdma_message)
 
@@ -119,7 +119,7 @@ class rdma_message :
   rdma_message(){} //need for serialization
 
   rdma_message(int iter, int num_bytes) :
-   sumi::message(num_bytes),
+   ::sumi::deprecated::message(num_bytes),
    iter_(iter)
   {
   }
@@ -128,10 +128,10 @@ class rdma_message :
     ser & iter_;
     ser & start_;
     ser & finish_;
-    sumi::message::serialize_order(ser);
+    ::sumi::deprecated::message::serialize_order(ser);
   }
 
-  sumi::message* clone(payload_type_t ty) const override {
+  ::sumi::deprecated::message* clone(payload_type_t ty) const override {
     rdma_message* cln = new rdma_message(iter_, num_bytes_);
     cln->set_start(start_);
     cln->set_finish(finish_);
@@ -158,7 +158,7 @@ std::vector<std::map<int, std::map<int, rdma_message*>>> results;
 static int num_done = 0;
 
 void
-progress_loop(sumi::transport* tport, double timeout,
+progress_loop(::sstmac::sumi::transport* tport, double timeout,
               std::list<rdma_message*>& done)
 {
   double now = tport->wall_time();
@@ -175,7 +175,7 @@ progress_loop(sumi::transport* tport, double timeout,
       done.push_back(msg);
       debug_printf(sprockit::dbg::traffic_matrix,
         "Rank %d got incoming message at t=%10.6e of type %s from %d",
-        tport->rank(), now, sumi::message::tostr(msg->payload_type()), msg->sender());
+        tport->rank(), now, ::sumi::deprecated::message::tostr(msg->payload_type()), msg->sender());
     } else {
       debug_printf(sprockit::dbg::traffic_matrix,
         "Rank %d timed out in progress loop at t=%10.6e",
@@ -190,7 +190,7 @@ progress_loop(sumi::transport* tport, double timeout,
 
 void do_all_sends(
   int iteration,
-  sumi::transport* tport,
+  ::sstmac::sumi::transport* tport,
   int chunk_size,
   const std::vector<int>& send_partners,
   const std::vector<sumi::public_buffer>& send_chunks,
@@ -220,7 +220,7 @@ void do_all_sends(
 }
 
 void
-quiesce(sumi::transport* tport,
+quiesce(::sstmac::sumi::transport* tport,
   int npartners, int niterations,
   std::list<rdma_message*>& done)
 {
@@ -243,8 +243,8 @@ quiesce(sumi::transport* tport,
 
 int USER_MAIN(int argc, char** argv)
 {
-  sstmac::sumi_transport* tport = sstmac::sw::operating_system::current_thread()
-      ->get_api<sstmac::sumi_transport>();
+  sstmac::sumi::transport* tport = sstmac::sw::operating_system::current_thread()
+      ->get_api<sstmac::sumi::transport>();
 
   tport->init();
 
@@ -324,7 +324,7 @@ int USER_MAIN(int argc, char** argv)
     debug_printf(sprockit::dbg::traffic_matrix,
       "Rank %d sending config message to partner %d",
       tport->rank(), recv_partners[i]);
-    tport->send_header(recv_partners[i], msg, sumi::message::no_ack, sumi::message::default_cq);
+    tport->send_header(recv_partners[i], msg, ::sumi::deprecated::message::no_ack, ::sumi::deprecated::message::default_cq);
   }
 
   int configs_recved = 0;

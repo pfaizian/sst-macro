@@ -45,7 +45,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #ifndef sumi_DOMAIN_H
 #define sumi_DOMAIN_H
 
-#include <sumi/transport_fwd.h>
+#include <sstmac/libraries/sumi/sumi_transport_fwd.h>
 #include <set>
 
 namespace sumi {
@@ -107,7 +107,7 @@ class global_communicator :
   public communicator
 {
  public:
-  global_communicator(transport* tport);
+  global_communicator(::sstmac::sumi::transport* tport);
 
   int nproc() const override;
 
@@ -116,7 +116,7 @@ class global_communicator :
   int global_to_comm_rank(int global_rank) const override;
 
  private:
-  transport* transport_;
+  ::sstmac::sumi::transport* transport_;
 };
 
 class shifted_communicator :

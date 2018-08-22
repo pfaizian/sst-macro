@@ -46,11 +46,13 @@ Questions? Contact sst-macro-help@sandia.gov
 #define sumi_api_TRANSPORT_FWD_H
 
 namespace sumi {
+namespace deprecated {
 
 class transport;
 class resilient_transport;
 class collective_transport;
 
-}
+} // namespace deprecated
+} // namespace sumi
 
 #endif // TRANSPORT_FWD_H

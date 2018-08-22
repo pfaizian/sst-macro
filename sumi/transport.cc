@@ -43,7 +43,7 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include <cstring>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sumi/dynamic_tree_vote.h>
 #include <sumi/allreduce.h>
 #include <sumi/reduce_scatter.h>
@@ -80,19 +80,9 @@ namespace sumi {
 
 const int options::initial_context = -2;
 
-collective_algorithm_selector* transport::allgather_selector_ = nullptr;
-collective_algorithm_selector* transport::alltoall_selector_ = nullptr;
-collective_algorithm_selector* transport::alltoallv_selector_ = nullptr;
-collective_algorithm_selector* transport::allreduce_selector_ = nullptr;
-collective_algorithm_selector* transport::allgatherv_selector_ = nullptr;
-collective_algorithm_selector* transport::bcast_selector_ = nullptr;
-collective_algorithm_selector* transport::gather_selector_ = nullptr;
-collective_algorithm_selector* transport::gatherv_selector_ = nullptr;
-collective_algorithm_selector* transport::reduce_selector_ = nullptr;
-collective_algorithm_selector* transport::reduce_scatter_selector_ = nullptr;
-collective_algorithm_selector* transport::scan_selector_ = nullptr;
-collective_algorithm_selector* transport::scatter_selector_ = nullptr;
-collective_algorithm_selector* transport::scatterv_selector_ = nullptr;
+namespace deprecated {
+
+
 
 transport::transport(sprockit::sim_parameters* params) :
 #ifdef FEATURE_TAG_SUMI_RESILIENCE
@@ -126,13 +116,13 @@ transport::transport(sprockit::sim_parameters* params) :
   use_put_protocol_ = params->get_optional_bool_param("use_put_protocol", false);
 }
 
-void
-transport::wait_barrier(int tag)
-{
-  if (nproc_ == 1) return;
-  barrier(tag);
-  collective_block(collective::barrier, tag);
-}
+// void
+// transport::wait_barrier(int tag)
+// {
+//   if (nproc_ == 1) return;
+//   barrier(tag);
+//   collective_block(collective::barrier, tag);
+// }
 
 int
 transport::allocate_cq()
@@ -164,7 +154,9 @@ transport::init()
 {
   //THIS SHOULD ONLY BE CALLED AFTER RANK and NPROC are known
   inited_ = true;
-  global_domain_ = new global_communicator(this);
+  // TODO actully figure out where this belongs, I am moving it to
+  // sumi_transport for now. 
+  // global_domain_ = new global_communicator(this);
 }
 
 void
@@ -472,22 +464,23 @@ transport::~transport()
   if (global_domain_) delete global_domain_;
 }
 
-void
-transport::dynamic_tree_vote(int vote, int tag, vote_fxn fxn, collective::config cfg)
-{
-  if (cfg.dom == nullptr) cfg.dom = global_domain_;
-
-  if (cfg.dom->nproc() == 1){
-    auto dmsg = new collective_done_message(tag, collective::dynamic_tree_vote, cfg.dom, cfg.cq_id);
-    dmsg->set_comm_rank(0);
-    dmsg->set_vote(vote);
-    vote_done(cfg.context, dmsg);
-    return;
-  }
-
-  dynamic_tree_vote_collective* voter = new dynamic_tree_vote_collective(vote, fxn, tag, this, cfg);
-  start_collective(voter);
-}
+// MOVED TO SUMI_TRANSPORT
+// void
+// transport::dynamic_tree_vote(int vote, int tag, vote_fxn fxn, collective::config cfg)
+// {
+//   if (cfg.dom == nullptr) cfg.dom = global_domain_;
+// 
+//   if (cfg.dom->nproc() == 1){
+//     auto dmsg = new collective_done_message(tag, collective::dynamic_tree_vote, cfg.dom, cfg.cq_id);
+//     dmsg->set_comm_rank(0);
+//     dmsg->set_vote(vote);
+//     vote_done(cfg.context, dmsg);
+//     return;
+//   }
+// 
+//   dynamic_tree_vote_collective* voter = new dynamic_tree_vote_collective(vote, fxn, tag, this, cfg);
+//   start_collective(voter);
+// }
 
 template <class Map, class Val, class Key>
 bool pull_from_map(Val& val, const Map& m, const Key& k)
@@ -655,229 +648,231 @@ transport::skip_collective(collective::type_t ty,
   }
 }
 
-void
-transport::allreduce(void* dst, void *src, int nelems, int type_size, int tag, reduce_fxn fxn,
-                     collective::config cfg)
-{
-  if (skip_collective(collective::allreduce, cfg, dst, src, nelems, type_size, tag))
-    return;
+// MOVED TO SUMI_TRANSPORT
+// void
+// transport::allreduce(void* dst, void *src, int nelems, int type_size, int tag, reduce_fxn fxn,
+//                      collective::config cfg)
+// {
+//   if (skip_collective(collective::allreduce, cfg, dst, src, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = allreduce_selector_ == nullptr
+//       ? new wilke_halving_allreduce
+//       : allreduce_selector_->select(cfg.dom->nproc(), nelems);
+//   coll->init(collective::allreduce, this, dst, src, nelems, type_size, tag, cfg);
+//   coll->init_reduce(fxn);
+//   start_collective(coll);
+// }
 
-  dag_collective* coll = allreduce_selector_ == nullptr
-      ? new wilke_halving_allreduce
-      : allreduce_selector_->select(cfg.dom->nproc(), nelems);
-  coll->init(collective::allreduce, this, dst, src, nelems, type_size, tag, cfg);
-  coll->init_reduce(fxn);
-  start_collective(coll);
-}
+// MOVED TO SUMI_TRANSPORT
+// void
+// transport::reduce_scatter(void* dst, void *src, int nelems, int type_size, int tag, reduce_fxn fxn,
+//                      collective::config cfg)
+// {
+//   if (skip_collective(collective::reduce_scatter, cfg, dst, src, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = reduce_scatter_selector_ == nullptr
+//       ? new halving_reduce_scatter
+//       : reduce_scatter_selector_->select(cfg.dom->nproc(), nelems);
+//   coll->init(collective::reduce_scatter, this, dst, src, nelems, type_size, tag, cfg);
+//   coll->init_reduce(fxn);
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::scan(void* dst, void* src, int nelems, int type_size, int tag, reduce_fxn fxn,
+//                 collective::config cfg)
+// {
+//   if (skip_collective(collective::scan, cfg, dst, src, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = scan_selector_ == nullptr
+//       ? new simultaneous_btree_scan
+//       : scan_selector_->select(cfg.dom->nproc(), nelems);
+// 
+//   coll->init(collective::scan, this, dst, src, nelems, type_size, tag, cfg);
+//   coll->init_reduce(fxn);
+//   start_collective(coll);
+// }
+// 
+// 
+// void
+// transport::reduce(int root, void* dst, void *src, int nelems, int type_size, int tag, reduce_fxn fxn,
+//                   collective::config cfg)
+// {
+//   if (skip_collective(collective::reduce, cfg, dst, src, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = reduce_selector_ == nullptr
+//       ? new wilke_halving_reduce
+//       : reduce_selector_->select(cfg.dom->nproc(), nelems);
+//   coll->init(collective::reduce, this, dst, src, nelems, type_size, tag, cfg);
+//   coll->init_root(root);
+//   coll->init_reduce(fxn);
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::bcast(int root, void *buf, int nelems, int type_size, int tag, collective::config cfg)
+// {
+//   if (skip_collective(collective::bcast, cfg, buf, buf, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = bcast_selector_ == nullptr
+//       ? new binary_tree_bcast_collective
+//       : bcast_selector_->select(cfg.dom->nproc(), nelems);
+// 
+//   coll->init(collective::bcast, this, buf, buf, nelems, type_size, tag, cfg);
+//   coll->init_root(root);
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::gatherv(int root, void *dst, void *src,
+//                    int sendcnt, int *recv_counts,
+//                    int type_size, int tag,
+//                    collective::config cfg)
+// {
+//   if (skip_collective(collective::gatherv, cfg, dst, src, sendcnt, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = gatherv_selector_ == nullptr
+//       ? new btree_gatherv
+//       : gatherv_selector_->select(cfg.dom->nproc(), recv_counts);
+//   coll->init(collective::gatherv, this, dst, src, sendcnt, type_size, tag, cfg);
+//   coll->init_root(root);
+//   coll->init_recv_counts(recv_counts);
+//   sprockit::abort("gatherv");
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::gather(int root, void *dst, void *src, int nelems, int type_size, int tag,
+//                   collective::config cfg)
+// {
+//   if (skip_collective(collective::gather, cfg, dst, src, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = gather_selector_ == nullptr
+//       ? new btree_gather
+//       : gather_selector_->select(cfg.dom->nproc(), nelems);
+// 
+//   coll->init(collective::gather, this, dst, src, nelems, type_size, tag, cfg);
+//   coll->init_root(root);
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::scatter(int root, void *dst, void *src, int nelems, int type_size, int tag,
+//                    collective::config cfg)
+// {
+//   if (skip_collective(collective::scatter, cfg, dst, src, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = scatter_selector_ == nullptr
+//       ? new btree_scatter
+//       : scatter_selector_->select(cfg.dom->nproc(), nelems);
+// 
+//   coll->init(collective::scatter, this, dst, src, nelems, type_size, tag, cfg);
+//   coll->init_root(root);
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::scatterv(int root, void *dst, void *src, int* send_counts, int recvcnt, int type_size, int tag,
+//                     collective::config cfg)
+// {
+//   if (skip_collective(collective::scatterv, cfg, dst, src, recvcnt, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = scatterv_selector_ == nullptr
+//       ? new btree_scatterv
+//       : scatterv_selector_->select(cfg.dom->nproc(), send_counts);
+// 
+//   coll->init(collective::scatterv, this, dst, src, recvcnt, type_size, tag, cfg);
+//   coll->init_root(root);
+//   coll->init_send_counts(send_counts);
+//   sprockit::abort("scatterv");
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::alltoall(void *dst, void *src, int nelems, int type_size, int tag,
+//                     collective::config cfg)
+// {
+//   if (skip_collective(collective::alltoall, cfg, dst, src, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = alltoall_selector_ == nullptr
+//       ? new bruck_alltoall_collective
+//       : alltoall_selector_->select(cfg.dom->nproc(), nelems);
+// 
+//   coll->init(collective::alltoall, this, dst, src, nelems, type_size, tag, cfg);
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::alltoallv(void *dst, void *src, int* send_counts, int* recv_counts, int type_size, int tag,
+//                      collective::config cfg)
+// {
+//   if (skip_collective(collective::alltoallv, cfg, dst, src, send_counts[0], type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = alltoallv_selector_ == nullptr
+//       ? new direct_alltoallv_collective
+//       : alltoallv_selector_->select(cfg.dom->nproc(), send_counts);
+// 
+//   coll->init(collective::alltoallv, this, dst, src, 0, type_size, tag, cfg);
+//   coll->init_recv_counts(recv_counts);
+//   coll->init_send_counts(send_counts);
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::allgather(void *dst, void *src, int nelems, int type_size, int tag,
+//                      collective::config cfg)
+// {
+//   if (skip_collective(collective::allgather, cfg, dst, src, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = allgather_selector_ == nullptr
+//       ? new bruck_allgather_collective
+//       : allgather_selector_->select(cfg.dom->nproc(), nelems);
+// 
+//   coll->init(collective::allgather, this, dst, src, nelems, type_size, tag, cfg);
+//   start_collective(coll);
+// }
+// 
+// void
+// transport::allgatherv(void *dst, void *src, int* recv_counts, int type_size, int tag,
+//                       collective::config cfg)
+// {
+//   //if the allgatherv is skipped, we have a single recv count
+//   int nelems = *recv_counts;
+//   if (skip_collective(collective::allgatherv, cfg, dst, src, nelems, type_size, tag))
+//     return;
+// 
+//   dag_collective* coll = allgatherv_selector_ == nullptr
+//       ? new bruck_allgatherv_collective
+//       : allgatherv_selector_->select(cfg.dom->nproc(), recv_counts);
+// 
+//   //for the time being, ignore size and use the small-message algorithm
+//   coll->init(collective::allgatherv, this, dst, src, 0, type_size, tag, cfg);
+//   coll->init_recv_counts(recv_counts);
+//   start_collective(coll);
+// }
 
-void
-transport::reduce_scatter(void* dst, void *src, int nelems, int type_size, int tag, reduce_fxn fxn,
-                     collective::config cfg)
-{
-  if (skip_collective(collective::reduce_scatter, cfg, dst, src, nelems, type_size, tag))
-    return;
-
-  dag_collective* coll = reduce_scatter_selector_ == nullptr
-      ? new halving_reduce_scatter
-      : reduce_scatter_selector_->select(cfg.dom->nproc(), nelems);
-  coll->init(collective::reduce_scatter, this, dst, src, nelems, type_size, tag, cfg);
-  coll->init_reduce(fxn);
-  start_collective(coll);
-}
-
-void
-transport::scan(void* dst, void* src, int nelems, int type_size, int tag, reduce_fxn fxn,
-                collective::config cfg)
-{
-  if (skip_collective(collective::scan, cfg, dst, src, nelems, type_size, tag))
-    return;
-
-  dag_collective* coll = scan_selector_ == nullptr
-      ? new simultaneous_btree_scan
-      : scan_selector_->select(cfg.dom->nproc(), nelems);
-
-  coll->init(collective::scan, this, dst, src, nelems, type_size, tag, cfg);
-  coll->init_reduce(fxn);
-  start_collective(coll);
-}
-
-
-void
-transport::reduce(int root, void* dst, void *src, int nelems, int type_size, int tag, reduce_fxn fxn,
-                  collective::config cfg)
-{
-  if (skip_collective(collective::reduce, cfg, dst, src, nelems, type_size, tag))
-    return;
-
-  dag_collective* coll = reduce_selector_ == nullptr
-      ? new wilke_halving_reduce
-      : reduce_selector_->select(cfg.dom->nproc(), nelems);
-  coll->init(collective::reduce, this, dst, src, nelems, type_size, tag, cfg);
-  coll->init_root(root);
-  coll->init_reduce(fxn);
-  start_collective(coll);
-}
-
-void
-transport::bcast(int root, void *buf, int nelems, int type_size, int tag, collective::config cfg)
-{
-  if (skip_collective(collective::bcast, cfg, buf, buf, nelems, type_size, tag))
-    return;
-
-  dag_collective* coll = bcast_selector_ == nullptr
-      ? new binary_tree_bcast_collective
-      : bcast_selector_->select(cfg.dom->nproc(), nelems);
-
-  coll->init(collective::bcast, this, buf, buf, nelems, type_size, tag, cfg);
-  coll->init_root(root);
-  start_collective(coll);
-}
-
-void
-transport::gatherv(int root, void *dst, void *src,
-                   int sendcnt, int *recv_counts,
-                   int type_size, int tag,
-                   collective::config cfg)
-{
-  if (skip_collective(collective::gatherv, cfg, dst, src, sendcnt, type_size, tag))
-    return;
-
-  dag_collective* coll = gatherv_selector_ == nullptr
-      ? new btree_gatherv
-      : gatherv_selector_->select(cfg.dom->nproc(), recv_counts);
-  coll->init(collective::gatherv, this, dst, src, sendcnt, type_size, tag, cfg);
-  coll->init_root(root);
-  coll->init_recv_counts(recv_counts);
-  sprockit::abort("gatherv");
-  start_collective(coll);
-}
-
-void
-transport::gather(int root, void *dst, void *src, int nelems, int type_size, int tag,
-                  collective::config cfg)
-{
-  if (skip_collective(collective::gather, cfg, dst, src, nelems, type_size, tag))
-    return;
-
-  dag_collective* coll = gather_selector_ == nullptr
-      ? new btree_gather
-      : gather_selector_->select(cfg.dom->nproc(), nelems);
-
-  coll->init(collective::gather, this, dst, src, nelems, type_size, tag, cfg);
-  coll->init_root(root);
-  start_collective(coll);
-}
-
-void
-transport::scatter(int root, void *dst, void *src, int nelems, int type_size, int tag,
-                   collective::config cfg)
-{
-  if (skip_collective(collective::scatter, cfg, dst, src, nelems, type_size, tag))
-    return;
-
-  dag_collective* coll = scatter_selector_ == nullptr
-      ? new btree_scatter
-      : scatter_selector_->select(cfg.dom->nproc(), nelems);
-
-  coll->init(collective::scatter, this, dst, src, nelems, type_size, tag, cfg);
-  coll->init_root(root);
-  start_collective(coll);
-}
-
-void
-transport::scatterv(int root, void *dst, void *src, int* send_counts, int recvcnt, int type_size, int tag,
-                    collective::config cfg)
-{
-  if (skip_collective(collective::scatterv, cfg, dst, src, recvcnt, type_size, tag))
-    return;
-
-  dag_collective* coll = scatterv_selector_ == nullptr
-      ? new btree_scatterv
-      : scatterv_selector_->select(cfg.dom->nproc(), send_counts);
-
-  coll->init(collective::scatterv, this, dst, src, recvcnt, type_size, tag, cfg);
-  coll->init_root(root);
-  coll->init_send_counts(send_counts);
-  sprockit::abort("scatterv");
-  start_collective(coll);
-}
-
-void
-transport::alltoall(void *dst, void *src, int nelems, int type_size, int tag,
-                    collective::config cfg)
-{
-  if (skip_collective(collective::alltoall, cfg, dst, src, nelems, type_size, tag))
-    return;
-
-  dag_collective* coll = alltoall_selector_ == nullptr
-      ? new bruck_alltoall_collective
-      : alltoall_selector_->select(cfg.dom->nproc(), nelems);
-
-  coll->init(collective::alltoall, this, dst, src, nelems, type_size, tag, cfg);
-  start_collective(coll);
-}
-
-void
-transport::alltoallv(void *dst, void *src, int* send_counts, int* recv_counts, int type_size, int tag,
-                     collective::config cfg)
-{
-  if (skip_collective(collective::alltoallv, cfg, dst, src, send_counts[0], type_size, tag))
-    return;
-
-  dag_collective* coll = alltoallv_selector_ == nullptr
-      ? new direct_alltoallv_collective
-      : alltoallv_selector_->select(cfg.dom->nproc(), send_counts);
-
-  coll->init(collective::alltoallv, this, dst, src, 0, type_size, tag, cfg);
-  coll->init_recv_counts(recv_counts);
-  coll->init_send_counts(send_counts);
-  start_collective(coll);
-}
-
-void
-transport::allgather(void *dst, void *src, int nelems, int type_size, int tag,
-                     collective::config cfg)
-{
-  if (skip_collective(collective::allgather, cfg, dst, src, nelems, type_size, tag))
-    return;
-
-  dag_collective* coll = allgather_selector_ == nullptr
-      ? new bruck_allgather_collective
-      : allgather_selector_->select(cfg.dom->nproc(), nelems);
-
-  coll->init(collective::allgather, this, dst, src, nelems, type_size, tag, cfg);
-  start_collective(coll);
-}
-
-void
-transport::allgatherv(void *dst, void *src, int* recv_counts, int type_size, int tag,
-                      collective::config cfg)
-{
-  //if the allgatherv is skipped, we have a single recv count
-  int nelems = *recv_counts;
-  if (skip_collective(collective::allgatherv, cfg, dst, src, nelems, type_size, tag))
-    return;
-
-  dag_collective* coll = allgatherv_selector_ == nullptr
-      ? new bruck_allgatherv_collective
-      : allgatherv_selector_->select(cfg.dom->nproc(), recv_counts);
-
-  //for the time being, ignore size and use the small-message algorithm
-  coll->init(collective::allgatherv, this, dst, src, 0, type_size, tag, cfg);
-  coll->init_recv_counts(recv_counts);
-  start_collective(coll);
-}
-
-void
-transport::barrier(int tag, collective::config cfg)
-{
-  if (skip_collective(collective::barrier, cfg, 0, 0, 0, 0, tag))
-    return;
-
-  dag_collective* coll = new bruck_allgather_collective;
-  coll->init(collective::barrier, this, 0, 0, 0, 0, tag, cfg);
-  start_collective(coll);
-}
+// void
+// transport::barrier(int tag, collective::config cfg)
+// {
+//   if (skip_collective(collective::barrier, cfg, 0, 0, 0, 0, tag))
+//     return;
+// 
+//   dag_collective* coll = new bruck_allgather_collective;
+//   coll->init(collective::barrier, this, 0, 0, 0, 0, tag, cfg);
+//   start_collective(coll);
+// }
 
 void
 transport::finish_collective(collective* coll, collective_done_message* dmsg)
@@ -1188,4 +1183,5 @@ transport::failed_ranks(int context) const
 }
 #endif
 
-}
+} // namespace deprecated
+} // namespace sumi

@@ -44,7 +44,7 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include <sumi/allgatherv.h>
 #include <sumi/partner_timeout.h>
-#include <sumi/transport.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sumi/communicator.h>
 #include <sprockit/output.h>
 #include <cstring>

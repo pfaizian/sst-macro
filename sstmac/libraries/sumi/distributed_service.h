@@ -55,7 +55,7 @@ Questions? Contact sst-macro-help@sandia.gov
 namespace sstmac {
 
 class distributed_service :
- public sumi_transport
+ public sumi::transport
 {
   DeclareFactory(distributed_service, const std::string&, sw::software_id, sw::operating_system*)
  public:
@@ -63,7 +63,7 @@ class distributed_service :
                       const std::string& libname,
                       sw::software_id sid,
                       sw::operating_system* os) :
-    sumi_transport(params, libname.c_str(), sid, os),
+    sumi::transport(params, libname.c_str(), sid, os),
     terminated_(false)
   {
   }
@@ -73,7 +73,7 @@ class distributed_service :
   virtual void run() = 0;
 
  protected:
-  sumi::message* poll_for_message(bool blocking);
+  ::sumi::deprecated::message* poll_for_message(bool blocking);
 
   bool terminated() const {
     return terminated_;

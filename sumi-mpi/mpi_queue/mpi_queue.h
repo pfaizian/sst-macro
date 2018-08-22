@@ -138,7 +138,7 @@ class mpi_queue
     bool needs_send_ack,
     bool needs_recv_ack);
 
-  void post_header(mpi_message* msg, sumi::message::payload_type_t ty, bool needs_ack);
+  void post_header(mpi_message* msg, sumi::deprecated::message::payload_type_t ty, bool needs_ack);
 
  private:
   struct sortbyseqnum {
@@ -162,9 +162,9 @@ class mpi_queue
   typedef std::list<mpi_queue_probe_request*> probelist_t;
 
  private:
-  void handle_poll_msg(sumi::message* msg);
+  void handle_poll_msg(sumi::deprecated::message* msg);
 
-  void handle_collective_done(sumi::message* msg);
+  void handle_collective_done(sumi::deprecated::message* msg);
 
   void incoming_completion_ack(mpi_message* message);
 
