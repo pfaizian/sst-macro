@@ -388,15 +388,6 @@ class transport : public sstmac::sw::api, public ::sumi::deprecated::transport {
   int page_size_;
   bool pin_delay_;
 
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  void send_ping_request(int dst) override;
-
-  void ping_timeout(sumi::pinger* pnger);
-
-  void schedule_ping_timeout(sumi::pinger* pnger, double to) override;
-
-  void schedule_next_heartbeat() override;
-#endif
 };
 
 }  // namespace sumi

@@ -102,9 +102,6 @@ debug_print(const char* info, const std::string& rank_str,
 void
 collective_actor::init(::sstmac::sumi::transport *my_api, int tag, const collective::config& cfg)
 {
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  rank_map_.init(my_api->failed_ranks(context), dom);
-#endif
   tag_ = tag;
   cfg_ = cfg;
   my_api_ = my_api;
@@ -116,16 +113,10 @@ collective_actor::init(::sstmac::sumi::transport *my_api, int tag, const collect
 collective_actor::collective_actor(::sstmac::sumi::transport* my_api, int tag, const collective::config& cfg)
 {
   init(my_api, tag, cfg);
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  timeout_ = new collective_timeout(this);
-#endif
 }
 
 collective_actor::~collective_actor()
 {
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  delete timeout_;
-#endif
 }
 
 std::string
@@ -307,9 +298,6 @@ dag_collective_actor::comm_action_done(action* ac)
     ac->round, ac->id,
     tag_);
 
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  cancel_ping(ac->partner);
-#endif
   clear_action(ac);
 }
 
@@ -655,9 +643,6 @@ dag_collective_actor::send_failure_message(
                     no_elems, tag_,
                     ac->round, dense_me_,
                     ac->partner);
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  msg->append_failed(failed_ranks_);
-#endif
   int phys_dst =  cfg_.dom->comm_to_global_rank(phys_dst);
   my_api_->smsg_send(phys_dst, ::sumi::deprecated::message::header, msg,
                      ::sumi::deprecated::message::no_ack, cfg_.cq_id);
@@ -725,10 +710,6 @@ dag_collective_actor::data_sent(::sumi::deprecated::collective_work_message* msg
 void
 dag_collective_actor::incoming_nack(action::type_t ty, ::sumi::deprecated::collective_work_message* msg)
 {
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  const std::set<int>& failed = msg->failed_procs();
-  failed_ranks_.insert_all(failed);
-#endif
   //got from sender, my action is recv
   comm_action_done(ty, msg->round(), msg->dense_sender());
 }
@@ -992,13 +973,6 @@ dag_collective_actor::incoming_recv_message(action* ac, ::sumi::deprecated::coll
     data_recved(ac, msg, msg->eager_buffer());
     delete msg;
     break;
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  case ::sumi::deprecated::collective_work_message::nack_get_header:
-  case ::sumi::deprecated::collective_work_message::nack_eager:
-    failed_ranks_.insert_all(msg->failed_procs());
-    comm_action_done(ac);
-    break;
-#endif
   default:
     spkt_throw_printf(sprockit::value_error,
      "invalid recv action %s", ::sumi::deprecated::collective_work_message::tostr(msg->action()));
@@ -1013,12 +987,6 @@ dag_collective_actor::incoming_send_message(action* ac, ::sumi::deprecated::coll
   case ::sumi::deprecated::collective_work_message::rdma_put_header:
     next_round_ready_to_put(ac, msg);
     break;
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  case ::sumi::deprecated::collective_work_message::nack_put_header:
-    failed_ranks_.insert_all(msg->failed_procs());
-    comm_action_done(ac);
-    break;
-#endif
   default:
     spkt_throw_printf(sprockit::value_error,
      "invalid send action %s", ::sumi::deprecated::collective_work_message::tostr(msg->action()));
@@ -1089,13 +1057,6 @@ dag_collective_actor::done_msg() const
   auto msg = new ::sumi::deprecated::collective_done_message(tag_, type_, cfg_.dom, cfg_.cq_id);
   msg->set_comm_rank( cfg_.dom->my_comm_rank());
   msg->set_result(result_buffer_.ptr);
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-  auto end = failed_ranks_.start_iteration();
-  for (auto it = failed_ranks_.begin(); it != end; ++it){
-    msg->append_failed(global_rank(*it));
-  }
-  failed_ranks_.end_iteration();
-#endif
   return msg;
 }
 
@@ -1231,163 +1192,5 @@ dag_collective_actor::message_buffer(void* buffer, int offset)
   //nope, no buffer
   return 0;
 }
-
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-void
-dag_collective_actor::dense_partner_ping_failed(int dense_rank)
-{
-  debug_printf(sumi_collective,
-     "Rank %s on collective %s - partner %s returned failed ping",
-      rank_str().c_str(), collective::tostr(type_),
-      rank_str(dense_rank).c_str());
-  failed_ranks_.insert(dense_rank);
-  fail_actions(dense_rank);
-}
-
-void
-collective_actor::validate_pings_cleared()
-{
-  int size = ping_refcounts_.size();
-  if (size){
-    spkt_throw_printf(sprockit::illformed_error,
-        "dag_collective_actor::rank %d still has %d outstanding pings\n",
-        my_api_->rank(), ping_refcounts_.size());
-  }
-}
-
-void
-collective_actor::partner_ping_failed(int global_rank)
-{
-  //map this to virtual rank
-  int comm_rank =  cfg_.dom->global_to_comm_rank(global_rank);
-  int dense_rank = rank_map_.dense_rank(comm_rank);
-  dense_partner_ping_failed(dense_rank);
-}
-
-void
-collective_actor::cancel_ping(int dense_rank)
-{
-  if (!fault_aware_)
-    return;
-
-  int cm_rank = comm_rank(dense_rank);
-  if (cm_rank ==  cfg_.dom->my_comm_rank())  //no need to ping self
-    return;
-
-  std::map<int,int>::iterator it = ping_refcounts_.find(cm_rank);
-  if (it == ping_refcounts_.end())
-    spkt_throw_printf(sprockit::illformed_error,
-        "dag_collective_actor trying to cancel non-existent ping");
-
-  int& refcount = it->second;
-  --refcount;
-  if (refcount == 0){
-    int global_phys_rank =  cfg_.dom->comm_to_global_rank(cm_rank);
-    debug_printf(sumi_collective | sumi_ping,
-      "Rank %s collective %s(%p) erase ping for partner %d:%d:%d on tag=%d ",
-      rank_str().c_str(), to_string().c_str(), this,
-      dense_rank, cm_rank, global_phys_rank, tag_);
-      ping_refcounts_.erase(it);
-      stop_check_neighbor(global_phys_rank);
-  } else {
-    debug_printf(sumi_collective | sumi_ping,
-        "Rank %s collective %s(%p) decrement ping refcount to %d for partner %d:%d on tag=%d ",
-    rank_str().c_str(), to_string().c_str(), this,
-    refcount,
-    dense_rank, cm_rank, tag_);
-  }
-}
-
-bool
-collective_actor::ping_rank(int comm_rank, int dense_rank)
-{
-  int& refcount = ping_refcounts_[comm_rank];
-  if (refcount != 0){
-     debug_printf(sumi_collective | sumi_ping,
-         "Rank %s collective %s(%p) already pinging %d with refcount=%d on tag=%d ",
-         rank_str().c_str(), to_string().c_str(), this,
-         comm_rank, refcount, tag_);
-    //we be pinging in the rain, just pinging in the rain
-    ++refcount;
-    return false; //all is well, we think - we have a pending ping
-  } else {
-    int global_phys_rank =  cfg_.dom->comm_to_global_rank(comm_rank);
-    debug_printf(sumi_collective | sumi_ping,
-      "Rank %s collective %s(%p) begin pinging %d:%d on tag=%d ",
-      rank_str().c_str(), to_string().c_str(), this,
-      comm_rank, global_phys_rank, tag_);
-
-    //we don't know anything - do a more extensive check
-    bool is_dead = check_neighbor(global_phys_rank);
-    if (is_dead){
-      debug_printf(sumi_collective | sumi_ping,
-        "Rank %s collective %s(%p) sees that %d:%d is apparently dead on tag=%d ",
-        rank_str().c_str(), to_string().c_str(), this,
-        comm_rank, global_phys_rank, tag_);
-      failed_ranks_.insert(dense_rank);
-      ping_refcounts_.erase(comm_rank);
-      return true;
-    } else {
-      debug_printf(sumi_collective | sumi_ping,
-        "Rank %s collective %s(%p) has started new ping to %s on tag=%d ",
-        rank_str().c_str(), to_string().c_str(), this,
-        rank_str(dense_rank).c_str(),
-        tag_);
-      ++refcount;
-      return false; //nope, all good
-    }
-  }
-}
-
-bool
-collective_actor::do_ping_neighbor(int dense_rank)
-{
-  int cm_rank = comm_rank(dense_rank);
-  if (cm_rank ==  cfg_.dom->my_comm_rank()){
-    //no reason to ping self
-    return false;
-  }
-  return ping_rank(cm_rank, dense_rank);
-}
-
-bool
-collective_actor::ping_neighbor(int dense_rank)
-{
-  if (!fault_aware_){
-    return false; //not failed
-  } else if (is_failed(dense_rank)){
-    //this guy is failed - no reason to communicate
-    return true;
-  } else {
-    return do_ping_neighbor(dense_rank);
-  }
-}
-
-std::string
-collective_actor::failed_proc_string() const
-{
-  std::stringstream sstr;
-  sstr << "{";
-  auto end = failed_ranks_.start_iteration();
-  for (auto it = failed_ranks_.begin(); it != end; ++it){
-    sstr << " " << *it;
-  }
-  failed_ranks_.end_iteration();
-  sstr << " }";
-  return sstr.str();
-}
-
-bool
-collective_actor::check_neighbor(int global_phys_rank)
-{
-  return my_api_->start_watching(global_phys_rank, timeout_);
-}
-
-void
-collective_actor::stop_check_neighbor(int global_phys_rank)
-{
-  my_api_->stop_watching(global_phys_rank, timeout_);
-}
-#endif
 
 }

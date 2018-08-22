@@ -766,29 +766,5 @@ void transport::dynamic_tree_vote(int vote, int tag, ::sumi::vote_fxn fxn,
   start_collective(voter);
 }
 
-#ifdef FEATURE_TAG_SUMI_RESILIENCE
-void transport::send_ping_request(int dst) {
-  ::sumi::deprecated::message* msg = new ::sumi::deprecated::message > ();
-  msg->set_class_type(::sumi::deprecated::message::ping);
-  // here, a simple rdma get
-  rdma_get(dst, msg);
-}
-
-void transport::schedule_next_heartbeat() {
-  schedule_delay(heartbeat_interval_,
-                 new_callback(loc_, this, &transport::next_heartbeat));
-}
-
-
-void transport::schedule_ping_timeout(sumi::pinger* pnger, double to) {
-  sstmac::timestamp next_ping_time = api::now() + to;
-  sstmac::callback* cb_event =
-      sstmac::new_callback(loc_, this, &transport::ping_timeout, pnger);
-  api::schedule(next_ping_time, cb_event);
-}
-
-void transport::ping_timeout(sumi::pinger* pnger) { pnger->execute(); }
-#endif
-
 }  // namespace sumi
 }  // namespace sstmac
