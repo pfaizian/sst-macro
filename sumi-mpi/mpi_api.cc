@@ -199,7 +199,7 @@ mpi_api::abort(MPI_Comm comm, int errcode)
 #endif
 
   spkt_throw_printf(sprockit::value_error,
-    "MPI rank %d exited with code %d", rank_, errcode);
+    "MPI rank %d exited with code %d", rank(), errcode);
   return MPI_SUCCESS;
 }
 
@@ -233,7 +233,7 @@ mpi_api::init(int* argc, char*** argv)
     sprockit::abort("mpiapi::init: os has not been initialized yet");
   }
 
-  comm_factory_.init(rank_, nproc_);
+  comm_factory_.init(rank(), nproc());
 
   worldcomm_ = comm_factory_.world();
   selfcomm_ = comm_factory_.self();
@@ -293,7 +293,7 @@ void
 mpi_api::check_init()
 {
   if (status_ != is_initialized){
-    spkt_abort_printf("MPI Rank %d calling functions before calling MPI_Init", rank_);
+    spkt_abort_printf("MPI Rank %d calling functions before calling MPI_Init", rank());
   }
 }
 
@@ -501,7 +501,7 @@ mpi_api::get_comm(MPI_Comm comm)
     }
     spkt_throw_printf(sprockit::spkt_error,
         "could not find mpi communicator %d for rank %d",
-        comm, int(rank_));
+        comm, int(rank()));
   }
   return it->second;
 }
@@ -512,7 +512,7 @@ mpi_api::get_group(MPI_Group grp)
   auto it = grp_map_.find(grp);
   if (it == grp_map_.end()) {
     spkt_abort_printf("could not find mpi group %d for rank %d",
-        grp, int(rank_));
+        grp, int(rank()));
   }
   return it->second;
 }
@@ -541,7 +541,7 @@ mpi_api::get_request(MPI_Request req)
   if (it == req_map_.end()) {
     spkt_throw_printf(sprockit::spkt_error,
         "could not find mpi request %d for rank %d",
-        req, int(rank_));
+        req, int(rank()));
   }
   return it->second;
 }
@@ -565,7 +565,7 @@ mpi_api::erase_comm_ptr(MPI_Comm comm)
     if (it == comm_map_.end()) {
       spkt_throw_printf(sprockit::spkt_error,
         "could not find mpi communicator %d for rank %d",
-        comm, int(rank_));
+        comm, int(rank()));
     }
     comm_map_.erase(it);
   }
@@ -595,7 +595,7 @@ mpi_api::erase_group_ptr(MPI_Group grp)
     if (it == grp_map_.end()) {
       spkt_throw_printf(sprockit::spkt_error,
         "could not find mpi group %d for rank %d",
-        grp, int(rank_));
+        grp, int(rank()));
     }
     grp_map_.erase(it);
   }
@@ -615,7 +615,7 @@ mpi_api::erase_request_ptr(MPI_Request req)
   if (it == req_map_.end()) {
     spkt_throw_printf(sprockit::spkt_error,
         "could not find mpi request %d for rank %d",
-        req, int(rank_));
+        req, int(rank()));
   }
   delete it->second;
   req_map_.erase(it);

@@ -42,10 +42,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Questions? Contact sst-macro-help@sandia.gov
 */
 
+#include <sumi/message.h>
+#include <sumi/collective_message.h>
+
 #include <sumi-mpi/mpi_api.h>
 #include <sumi-mpi/mpi_queue/mpi_queue.h>
+
 #include <sstmac/software/process/operating_system.h>
 #include <sstmac/software/process/thread.h>
+#include <sstmac/libraries/sumi/sumi_transport.h>
 
 namespace sumi {
 
@@ -217,7 +222,8 @@ mpi_api::wait_collective(collective_op_base* op)
   
   std::list<sumi::deprecated::collective_done_message*>::iterator it, end = pending.end();
   for (it=pending.begin(); it != end; ++it){
-    completion_queues_[collective_cq_id()].push_back(*it);
+    // completion_queues_[collective_cq_id()].push_back(*it);
+    cq_push_back(collective_cq_id(), *it);
   }
 
   if (op->comm->id() == MPI_COMM_WORLD){

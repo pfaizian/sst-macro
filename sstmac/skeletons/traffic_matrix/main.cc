@@ -49,7 +49,6 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/software/process/app.h>
 #include <sstmac/software/process/operating_system.h>
 #include <sstmac/libraries/sumi/sumi_transport.h>
-// #include <sumi/transport.h>
 #include <sstmac/skeleton.h>
 #include <sprockit/keyword_registration.h>
 

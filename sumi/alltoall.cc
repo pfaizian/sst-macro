@@ -43,7 +43,6 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include <sumi/alltoall.h>
-#include <sumi/partner_timeout.h>
 #include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sumi/communicator.h>
 #include <sprockit/output.h>

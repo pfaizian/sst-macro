@@ -84,7 +84,7 @@ void comm_kill_process()
 void comm_kill_node()
 {
   sstmac::sw::operating_system::current_os()->kill_node();
-  throw ::sumi::deprecated::terminate_exception();
+  throw ::sstmac::sumi::terminate_exception();
 }
 
 void comm_finalize()
