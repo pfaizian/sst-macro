@@ -46,7 +46,6 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/software/launch/launch_request.h>
 #include <sstmac/util.h>
 #include <sstmac/libraries/sumi/sumi_transport.h>
-// #include <sumi/transport.h>
 #include <sstmac/libraries/sumi/sumi.h>
 #include <sstmac/libraries/sumi/distributed_service.h>
 #include <sstmac/software/launch/job_launcher.h>

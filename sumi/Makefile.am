@@ -48,18 +48,13 @@ library_include_HEADERS = \
  message_fwd.h \
  monitor.h \
  options.h \
- partner_timeout.h \
- ping.h \
  rdma.h \
  rdma_mdata.h \
- timeout.h \
- transport.h \
- transport_fwd.h 
+ timeout.h 
 
 libsumi_la_SOURCES = \
  alltoall.cc \
  alltoallv.cc \
- transport.cc \
  allgather.cc \
  allgatherv.cc \
  allreduce.cc \
@@ -78,8 +73,6 @@ libsumi_la_SOURCES = \
  communicator.cc \
  dynamic_tree_vote.cc \
  message.cc \
- monitor.cc \
- partner_timeout.cc \
- ping.cc 
+ monitor.cc 
 
 

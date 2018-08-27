@@ -43,8 +43,6 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include <sumi/collective_actor.h>
-#include <sumi/partner_timeout.h>
-#include <sumi/ping.h>
 #include <sstmac/libraries/sumi/sumi_transport.h>
 #include <sumi/communicator.h>
 #include <sprockit/output.h>
@@ -1184,7 +1182,7 @@ virtual_rank_map::virtual_to_real(int virtual_rank) const
 void*
 dag_collective_actor::message_buffer(void* buffer, int offset)
 {
-  if (::sumi::deprecated::isNonNull(buffer)){
+  if (::sstmac::sumi::isNonNull(buffer)){
     int total_stride = type_size_ * offset;
     char* tmp = ((char*)buffer) + total_stride;
     return tmp;

@@ -56,6 +56,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sprockit/allocator.h>
 
 DeclareDebugSlot(sumi_collective_buffer)
+DeclareDebugSlot(sumi_failure)
 
 #define sumi_case(x) case x: return #x
 

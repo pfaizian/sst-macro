@@ -42,6 +42,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Questions? Contact sst-macro-help@sandia.gov
 */
 
+#include <sumi/message.h>
+#include <sumi/collective_message.h>
+
 #include <sumi-mpi/mpi_api.h>
 #include <sumi-mpi/mpi_queue/mpi_queue.h>
 #include <sumi-mpi/mpi_queue/mpi_queue_recv_request.h>
@@ -49,9 +52,11 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sumi-mpi/mpi_queue/mpi_queue_probe_request.h>
 #include <sumi-mpi/mpi_status.h>
 #include <sumi-mpi/mpi_protocol/mpi_protocol.h>
+
 #include <sstmac/software/process/key.h>
 #include <sstmac/software/process/operating_system.h>
 #include <sstmac/software/process/thread.h>
+
 #include <sprockit/sim_parameters.h>
 #include <sprockit/factories/factory.h>
 #include <sprockit/debug.h>
@@ -59,6 +64,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sprockit/statics.h>
 #include <sprockit/keyword_registration.h>
 #include <sprockit/util.h>
+
 #include <stdint.h>
 
 RegisterNamespaces("traffic_matrix", "num_messages");
