@@ -265,7 +265,6 @@ class packet :
     node_id fromaddr,
     node_id toadadr);
 
-
 };
 
 }

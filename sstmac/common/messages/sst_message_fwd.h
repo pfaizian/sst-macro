@@ -47,7 +47,7 @@ Questions? Contact sst-macro-help@sandia.gov
 
 namespace sstmac {
 
-class message;
+class flow;
 class library_interface;
 
 }

@@ -122,11 +122,11 @@ logp_switch::~logp_switch()
 void
 logp_switch::send_event(event *ev)
 {
-  send(now(), dynamic_cast<message*>(ev));
+  send(now(), dynamic_cast<flow*>(ev));
 }
 
 void
-logp_switch::send(timestamp start, message* msg)
+logp_switch::send(timestamp start, flow* msg)
 {
   timestamp delay;
   if (rng_){

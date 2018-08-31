@@ -45,7 +45,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #ifndef LIBRARY_MESSAGE_H
 #define LIBRARY_MESSAGE_H
 
-#include <sstmac/common/messages/sst_message.h>
+#include <sstmac/common/messages/flow.h>
 
 namespace sstmac {
 

@@ -71,7 +71,7 @@ packetizer::~packetizer()
 }
 
 void
-packetizer::start(int vn, message *msg)
+packetizer::start(int vn, flow *msg)
 {
   pkt_debug("starting on vn %d message %s", vn, msg->to_string().c_str());
 
@@ -135,9 +135,9 @@ packetizer::sendWhatYouCan(int vn)
 }
 
 void
-packetizer::bytesArrived(int vn, uint64_t unique_id, uint32_t bytes, message *parent)
+packetizer::bytesArrived(int vn, uint64_t unique_id, uint32_t bytes, flow *parent)
 {
-  message* done = completion_queue_.recv(unique_id, bytes, parent);
+  flow* done = completion_queue_.recv(unique_id, bytes, parent);
   if (done){
     notifier_->notify(vn, done);
   }
@@ -146,7 +146,7 @@ packetizer::bytesArrived(int vn, uint64_t unique_id, uint32_t bytes, message *pa
 void
 packetizer::packetArrived(int vn, packet* pkt)
 {
-  message* payload = dynamic_cast<message*>(pkt->orig());
+  flow* payload = dynamic_cast<flow*>(pkt->orig());
   bytesArrived(vn, pkt->flow_id(), pkt->byte_length(), payload);
   delete pkt;
 }
@@ -177,7 +177,7 @@ class merlin_packetizer :
     return m_linkControl->spaceToSend(vn, num_bits);
   }
 
-  void inject(int vn, uint32_t bytes, uint64_t byte_offset, message *payload) override;
+  void inject(int vn, uint32_t bytes, uint64_t byte_offset, flow *payload) override;
 
   bool recvNotify(int vn);
 
@@ -242,10 +242,10 @@ bool
 merlin_packetizer::recvNotify(int vn)
 {
   SST::Interfaces::SimpleNetwork::Request* req = m_linkControl->recv(vn);
-  message* m = nullptr;
+  flow* m = nullptr;
   uint64_t flow_id;
   if (req->tail){
-    m = static_cast<message*>(req->takePayload());
+    m = static_cast<flow*>(req->takePayload());
     flow_id = m->flow_id();
   } else {
     SimpleNetworkPacket* p = static_cast<SimpleNetworkPacket*>(req->takePayload());
@@ -258,7 +258,7 @@ merlin_packetizer::recvNotify(int vn)
 }
 
 void
-merlin_packetizer::inject(int vn, uint32_t bytes, uint64_t byte_offset, message* payload)
+merlin_packetizer::inject(int vn, uint32_t bytes, uint64_t byte_offset, flow* payload)
 {
   SST::Interfaces::SimpleNetwork::nid_t dst = payload->toaddr();
   SST::Interfaces::SimpleNetwork::nid_t src = payload->toaddr();

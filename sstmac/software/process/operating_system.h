@@ -156,7 +156,7 @@ class operating_system :
    * use execute_kernel
    * @param data  Event carrying all the data describing the compute
    */
-  void execute(ami::COMM_FUNC func, message* data){
+  void execute(ami::COMM_FUNC func, flow* data){
     return execute_kernel(func, data);
   }
 
@@ -169,7 +169,7 @@ class operating_system :
    * @param data  Event carrying all the data describing the compute
    * @return A return code specifying success or failure
    */
-  void execute_kernel(ami::COMM_FUNC func, message* data);
+  void execute_kernel(ami::COMM_FUNC func, flow* data);
 
   /**
    * @brief execute Enqueue an operation to perform

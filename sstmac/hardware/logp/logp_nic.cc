@@ -86,7 +86,7 @@ void
 logp_nic::mtl_handle(event *ev)
 {
   timestamp now_ = now();
-  message* msg = static_cast<message*>(ev);
+  flow* msg = static_cast<flow*>(ev);
   if (msg->byte_length() < negligible_size_){
     recv_message(msg);
   } else {

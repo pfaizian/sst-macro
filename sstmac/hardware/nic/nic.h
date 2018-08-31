@@ -154,7 +154,7 @@ class nic :
    it gets routed here. Unlike #recv_chunk, this has a default implementation and does not throw.
    @param chunk
    */
-  void recv_message(message* msg);
+  void recv_message(flow* msg);
 
   void send_to_node(network_message* netmsg);
 

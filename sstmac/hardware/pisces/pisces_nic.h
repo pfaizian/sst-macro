@@ -78,7 +78,7 @@ class pisces_nic :
 
   virtual ~pisces_nic() throw ();
 
-  void notify(int vn, message* msg) override {
+  void notify(int vn, flow* msg) override {
     recv_message(msg);
   }
 

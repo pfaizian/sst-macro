@@ -165,7 +165,7 @@ pisces_memory_model::start(int channel, memory_message* msg, callback *cb)
 }
 
 void
-pisces_memory_model::notify(int vn, message* msg)
+pisces_memory_model::notify(int vn, flow* msg)
 {
   debug("Node %d finished access %lu on vn %d of size %ld",
         parent_node_->addr(), msg->flow_id(), vn, msg->byte_length());
@@ -212,7 +212,7 @@ pisces_memory_packetizer::init_noise_model()
 }
 
 void
-pisces_memory_packetizer::inject(int vn, uint32_t bytes, uint64_t byte_offset, message* msg)
+pisces_memory_packetizer::inject(int vn, uint32_t bytes, uint64_t byte_offset, flow* msg)
 {
   bool is_tail = (bytes + byte_offset) == msg->byte_length();
   pisces_payload* payload = new pisces_payload(is_tail ? msg : nullptr,

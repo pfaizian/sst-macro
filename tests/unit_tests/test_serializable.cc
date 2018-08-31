@@ -48,7 +48,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sprockit/test/test.h>
 #include <sprockit/debug.h>
 #include <sstmac/common/node_address.h>
-#include <sstmac/common/messages/sst_message.h>
+#include <sstmac/common/messages/flow.h>
 
 sstmac::node_id
 naddr(long nid)

@@ -109,11 +109,11 @@ class logp_switch : public connectable_component
 
   void drop_event(event* ev){}
 
-  void send(message *msg){
+  void send(flow *msg){
     send(now(), msg);
   }
 
-  void send(timestamp start, message* msg);
+  void send(timestamp start, flow* msg);
 
   timestamp send_latency(sprockit::sim_parameters* params) const override {
     return out_in_lat_;

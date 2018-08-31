@@ -1,18 +1,18 @@
 /**
-Copyright 2009-2018 National Technology and Engineering Solutions of Sandia, 
-LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government 
+Copyright 2009-2018 National Technology and Engineering Solutions of Sandia,
+LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government
 retains certain rights in this software.
 
 Sandia National Laboratories is a multimission laboratory managed and operated
-by National Technology and Engineering Solutions of Sandia, LLC., a wholly 
-owned subsidiary of Honeywell International, Inc., for the U.S. Department of 
+by National Technology and Engineering Solutions of Sandia, LLC., a wholly
+owned subsidiary of Honeywell International, Inc., for the U.S. Department of
 Energy's National Nuclear Security Administration under contract DE-NA0003525.
 
 Copyright (c) 2009-2018, NTESS
 
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification, 
+Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
     * Redistributions of source code must retain the above copyright
@@ -45,83 +45,63 @@ Questions? Contact sst-macro-help@sandia.gov
 #ifndef sstmac_hardware_network_NETWORK_MESSAGE_H
 #define sstmac_hardware_network_NETWORK_MESSAGE_H
 
-#include <sstmac/common/messages/sst_message.h>
-#include <sstmac/hardware/router/routing_enum.h>
+#include <sstmac/common/messages/flow.h>
 #include <sstmac/hardware/network/network_id.h>
-#include <sstmac/software/process/task_id.h>
+#include <sstmac/hardware/router/routing_enum.h>
 #include <sstmac/software/process/app_id.h>
+#include <sstmac/software/process/task_id.h>
 
 namespace sstmac {
 namespace hw {
 
-class network_message :
-  public message
-{
+class network_message : public flow {
   ImplementSerializable(network_message)
 
- public:
-  typedef enum {
-    RDMA_GET_FAILED,
-    RDMA_GET_REQ_TO_RSP,
-    NVRAM_GET_REQ_TO_RSP
-  } nic_event_t;
+      public : typedef enum {
+        RDMA_GET_FAILED,
+        RDMA_GET_REQ_TO_RSP,
+        NVRAM_GET_REQ_TO_RSP
+      } nic_event_t;
 
   typedef enum {
-    null_netmsg_type=0,
-    rdma_get_request=1,
-    rdma_get_sent_ack=2,
-    rdma_get_nack=3,
-    rdma_put_sent_ack=4,
-    rdma_put_nack=5,
-    payload_sent_ack=6,
-    payload=7,
-    rdma_get_payload=8,
-    rdma_put_payload=9,
-    nvram_get_request=10,
-    nvram_get_payload=11,
-    failure_notification=12
+    null_netmsg_type = 0,
+    rdma_get_request = 1,
+    rdma_get_sent_ack = 2,
+    rdma_get_nack = 3,
+    rdma_put_sent_ack = 4,
+    rdma_put_nack = 5,
+    payload_sent_ack = 6,
+    payload = 7,
+    rdma_get_payload = 8,
+    rdma_put_payload = 9,
+    nvram_get_request = 10,
+    nvram_get_payload = 11,
+    failure_notification = 12
   } type_t;
 
  public:
-  network_message(
-   sw::app_id aid,
-   node_id to,
-   node_id from,
-   uint64_t payload_bytes) :
-    aid_(aid),
-    needs_ack_(true),
-    toaddr_(to),
-    fromaddr_(from),
-    bytes_(payload_bytes),
-    type_(null_netmsg_type)
-  {
-  }
+  network_message(sw::app_id aid, node_id to, node_id from,
+                  uint64_t payload_bytes)
+      : aid_(aid),
+        needs_ack_(true),
+        toaddr_(to),
+        fromaddr_(from),
+        bytes_(payload_bytes),
+        type_(null_netmsg_type) {}
 
-  network_message(node_id toaddr, node_id fromaddr, int num_bytes) :
-    bytes_(num_bytes),
-    toaddr_(toaddr),
-    fromaddr_(fromaddr)
-  {
-  }
+  network_message(node_id toaddr, node_id fromaddr, int num_bytes)
+      : bytes_(num_bytes), toaddr_(toaddr), fromaddr_(fromaddr) {}
 
-  network_message(sw::app_id aid, uint64_t payload_bytes) :
-   bytes_(payload_bytes),
-   needs_ack_(true),
-   type_(null_netmsg_type),
-   aid_(aid)
-  {
-  }
+  network_message(sw::app_id aid, uint64_t payload_bytes)
+      : bytes_(payload_bytes),
+        needs_ack_(true),
+        type_(null_netmsg_type),
+        aid_(aid) {}
 
-  network_message() //for serialization
-   : needs_ack_(true),
-    type_(null_netmsg_type),
-    bytes_(0)
-  {
-  }
+  network_message()  // for serialization
+      : needs_ack_(true), type_(null_netmsg_type), bytes_(0) {}
 
-  virtual std::string to_string() const override {
-    return "network message";
-  }
+  virtual std::string to_string() const override { return "network message"; }
 
   virtual ~network_message() {}
 
@@ -137,40 +117,28 @@ class network_message :
     return cln;
   }
 
-  message* clone_ack() const override {
-    return clone_injection_ack();
-  }
+  flow* clone_ack() const override { return clone_injection_ack(); }
 
   virtual void nic_reverse(type_t newtype);
 
   bool is_nic_ack() const;
 
-  node_id toaddr() const override {
-    return toaddr_;
-  }
+  node_id toaddr() const override { return toaddr_; }
 
-  virtual void put_on_wire(){}
-  virtual void take_off_wire(){}
-  virtual void intranode_memmove(){}
+  virtual void put_on_wire() {}
+  virtual void take_off_wire() {}
+  virtual void intranode_memmove() {}
 
-  node_id fromaddr() const override {
-    return fromaddr_;
-  }
+  node_id fromaddr() const override { return fromaddr_; }
 
-  void set_toaddr(node_id addr) {
-    toaddr_ = addr;
-  }
+  void set_toaddr(node_id addr) { toaddr_ = addr; }
 
-  void set_fromaddr(node_id addr) {
-    fromaddr_ = addr;
-  }
+  void set_fromaddr(node_id addr) { fromaddr_ = addr; }
 
-  void set_needs_ack(bool n) {
-    needs_ack_ = n;
-  }
+  void set_needs_ack(bool n) { needs_ack_ = n; }
 
-  virtual bool needs_ack() const override {
-    //only paylods get acked
+  bool needs_ack() const override {
+    // only paylods get acked
     return needs_ack_ && type_ >= payload;
   }
 
@@ -178,25 +146,15 @@ class network_message :
 
   void convert_to_ack();
 
-  void set_flow_id(uint64_t id) {
-    flow_id_ = id;
-  }
+  void set_flow_id(uint64_t id) { flow_id_ = id; }
 
-  uint64_t flow_id() const override {
-    return flow_id_;
-  }
+  uint64_t flow_id() const override { return flow_id_; }
 
-  sw::app_id aid() const {
-    return aid_;
-  }
+  sw::app_id aid() const { return aid_; }
 
-  type_t type() const {
-    return type_;
-  }
+  type_t type() const { return type_; }
 
-  void set_type(type_t ty){
-    type_ = ty;
-  }
+  void set_type(type_t ty) { type_ = ty; }
 
   virtual void reverse();
 
@@ -219,9 +177,8 @@ class network_message :
   uint64_t bytes_;
 
   type_t type_;
-
 };
 
-}
-}
-#endif // NETWORK_MESSAGE_H
+}  // namespace hw
+}  // namespace sstmac
+#endif  // NETWORK_MESSAGE_H

@@ -46,7 +46,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #define PACKETFLOW_H
 
 #include <sstmac/hardware/common/packet.h>
-#include <sstmac/common/messages/sst_message.h>
+#include <sstmac/common/messages/flow.h>
 #include <sstmac/hardware/router/routing_enum.h>
 #include <sprockit/thread_safe_new.h>
 #include <sprockit/factories/factory.h>
@@ -88,6 +88,7 @@ class pisces_payload :
   virtual ~pisces_payload() {}
 
   /**
+
     Needed because of routable_message ambiguity
   */
   int vc() const {

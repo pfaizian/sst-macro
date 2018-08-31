@@ -57,7 +57,7 @@ namespace sstmac {
 namespace hw {
 
 class memory_message : 
-  public message,
+  public flow,
   public sprockit::thread_safe_new<memory_message>
 {
   NotSerializable(memory_message)
@@ -115,7 +115,7 @@ class pisces_memory_packetizer : public packetizer
 
   void recv_credit(event* ev);
 
-  void inject(int vn, uint32_t bytes, uint64_t byte_offset, message *payload) override;
+  void inject(int vn, uint32_t bytes, uint64_t byte_offset, flow *payload) override;
 
   bool spaceToSend(int vn, int num_bits) override {
     return channelFree_[vn];
@@ -157,7 +157,7 @@ class pisces_memory_model :
     return "packet flow memory model";
   }
 
-  void notify(int vn, message* msg) override;
+  void notify(int vn, flow* msg) override;
 
   void access(long bytes, double max_bw, callback* cb) override;
 
@@ -172,8 +172,8 @@ class pisces_memory_model :
   template <class T, class U> using pair_alc = sprockit::thread_safe_allocator<std::pair<T,U>>;
   //template <class T, class U> using pair_alc = std::allocator<std::pair<T,U>>;
 
-  std::map<message*, callback*, std::less<message*>,
-           pair_alc<message* const,callback*>> pending_requests_;
+  std::map<flow*, callback*, std::less<flow*>,
+           pair_alc<flow* const,callback*>> pending_requests_;
   std::list<std::pair<memory_message*,callback*>,
            pair_alc<memory_message*,callback*>> stalled_requests_;
   pisces_memory_packetizer* mem_packetizer_;

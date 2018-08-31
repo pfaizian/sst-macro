@@ -87,7 +87,7 @@ sstmac::hw::pisces_payload*
 msg(sstmac::node_id nid);
 
 sstmac::hw::pisces_payload*
-new_packet(sstmac::message* msg, uint32_t bytes, uint32_t byte_offset);
+new_packet(sstmac::flow* msg, uint32_t bytes, uint32_t byte_offset);
 
 sstmac::hw::coordinates
 get_vector(int a);

@@ -74,7 +74,7 @@ nobase_library_include_HEADERS = \
   messages/library_message.h \
   messages/message_buffer_cache.h \
   messages/sleep_event.h \
-  messages/sst_message.h \
+  messages/flow.h \
   messages/sst_message_fwd.h \
   messages/timed_event.h \
   stats/stat_spyplot.h \

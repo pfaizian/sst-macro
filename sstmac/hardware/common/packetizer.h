@@ -46,7 +46,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #define PACKETIZER_H
 
 #include <sprockit/factories/factory.h>
-#include <sstmac/common/messages/sst_message.h>
+#include <sstmac/common/messages/flow.h>
 #include <sstmac/hardware/common/packet.h>
 #include <sstmac/common/event_scheduler.h>
 #include <sstmac/hardware/common/recv_cq.h>
@@ -65,7 +65,7 @@ namespace hw {
 class packetizer_callback
 {
  public:
-  virtual void notify(int vn, message* msg) = 0;
+  virtual void notify(int vn, flow* msg) = 0;
 
   virtual ~packetizer_callback(){}
 };
@@ -77,7 +77,7 @@ class packetizer :
  public:
   virtual ~packetizer();
 
-  void start(int vn, message* payload);
+  void start(int vn, flow* payload);
 
   void packetArrived(int vn, packet* pkt);
 
@@ -102,7 +102,7 @@ class packetizer :
 
  private:
   virtual void inject(int vn, uint32_t bytes,
-                      uint64_t byte_offset, message* payload) = 0;
+                      uint64_t byte_offset, flow* payload) = 0;
 
   virtual bool spaceToSend(int vn, int num_bits) = 0;
 
@@ -110,8 +110,8 @@ class packetizer :
   recv_cq completion_queue_;
 
   struct pending_send{
-    message* msg;
-    message* ack;
+    flow* msg;
+    flow* ack;
     long bytes_left;
     long offset;
     pending_send() : ack(nullptr) {}
@@ -134,7 +134,7 @@ class packetizer :
   packetizer(sprockit::sim_parameters* params,
              event_scheduler* parent);
 
-  void bytesArrived(int vn, uint64_t unique_id, uint32_t bytes, message* parent);
+  void bytesArrived(int vn, uint64_t unique_id, uint32_t bytes, flow* parent);
 
 };
 

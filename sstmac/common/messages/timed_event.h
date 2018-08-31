@@ -45,7 +45,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #ifndef TIMED_MESSAGE_H
 #define TIMED_MESSAGE_H
 
-#include <sstmac/common/messages/sst_message.h>
+#include <sstmac/common/messages/flow.h>
 #include <sstmac/common/timestamp.h>
 
 namespace sstmac {

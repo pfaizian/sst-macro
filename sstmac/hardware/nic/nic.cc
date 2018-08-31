@@ -146,7 +146,7 @@ nic::~nic()
 void
 nic::mtl_handle(event *ev)
 {
-  recv_message(static_cast<message*>(ev));
+  recv_message(static_cast<flow*>(ev));
 }
 
 void
@@ -171,7 +171,7 @@ nic::inject_send(network_message* netmsg, sw::operating_system* os)
 }
 
 void
-nic::recv_message(message* msg)
+nic::recv_message(flow* msg)
 {
   if (parent_->failed()){
     return;

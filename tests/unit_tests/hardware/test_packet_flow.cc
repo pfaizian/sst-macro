@@ -90,7 +90,7 @@ test_arbitrator(UnitTest& unit)
       = new pisces_cut_through_arbitrator(&params);
 
 
-  message* parent = new test_message(num_packets_in_parent * packet_size);
+  flow* parent = new test_message(num_packets_in_parent * packet_size);
   pisces_payload* test_msg = new_packet(parent, packet_size, 0);
   test_msg->set_bw(link_bw);
 

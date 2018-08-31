@@ -410,7 +410,7 @@ print_msg(const std::string& prefix, switch_id addr, pisces_payload* pkt)
 #endif
 
 void
-pisces_NtoM_queue::start_message(message* msg)
+pisces_NtoM_queue::start_message(flow* msg)
 {
   sprockit::abort("pisces_NtoM_queue:: should never start a flow");
 }

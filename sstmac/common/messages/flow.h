@@ -67,17 +67,8 @@ class flow :
    * @return Zero size, meant to be implemented by children.
    */
   virtual uint64_t byte_length() const = 0;
-};
 
-/**
- * A class describing an event.
- */
-class message :
-  public flow
-{
-
- public:
-  virtual ~message() {}
+  virtual ~flow() {}
 
   virtual node_id toaddr() const = 0;
 
@@ -87,10 +78,9 @@ class message :
     return false;
   }
 
-  virtual message* clone_ack() const {
+  virtual flow* clone_ack() const {
     return nullptr;
   }
-
 };
 
 

@@ -46,7 +46,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstream>
 #include <csignal>
 
-#include <sstmac/common/messages/sst_message.h>
+#include <sstmac/common/messages/flow.h>
 #include <sstmac/common/sstmac_config.h>
 #include <sstmac/common/event_callback.h>
 #include <sstmac/common/runtime.h>
@@ -349,7 +349,7 @@ operating_system::execute(ami::COMP_FUNC func, event *data, int nthr)
 
 void
 operating_system::execute_kernel(ami::COMM_FUNC func,
-                                 message* data)
+                                 flow* data)
 {
   switch(func){
   case sstmac::ami::COMM_SEND: {

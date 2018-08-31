@@ -144,7 +144,7 @@ msg(node_id nid)
 }
 
 pisces_payload*
-new_packet(message *msg, uint32_t bytes, uint32_t byte_offset)
+new_packet(flow *msg, uint32_t bytes, uint32_t byte_offset)
 {
   return new pisces_payload(msg, bytes, 0, true, 0, 0);
 }
