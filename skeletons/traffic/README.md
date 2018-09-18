@@ -38,6 +38,6 @@ Having more senders than receivers can create extra congestion at a single recei
 The seeds create a shuffle of the MPI ranks, causing different "intersection" patterns through the crossbar.
 The benchmark requires that a send/receive pair do not reside on the same node to ensure that all measured bandwidths are from the switch, not the memory system. If send/recv random seeds cannot create a valid scenario, the benchmark will just exit.
 
-The following figure demonstrates a 4-port switch experiment with 2 senders and 1 recver.
+The following figure demonstrates a 4-port switch experiment with 2 senders and 1 receiver.
 
 ![Switch](TrafficFigure.jpg "Traffic Illustration")
