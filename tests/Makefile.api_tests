@@ -32,6 +32,7 @@ endif
 #  testsuite_mpi_222 \
 #  testsuite_mpi_236 \
 #  testsuite_mpi_238 \
+#  testsuite_mpi_258 \
 #
 # These are the ones that currently pass
 APITESTS = \
@@ -71,7 +72,6 @@ APITESTS = \
   testsuite_mpi_190 \
   testsuite_mpi_207 \
   testsuite_mpi_239 \
-  testsuite_mpi_258 \
   testsuite_mpi_259 \
   testsuite_mpi_260 \
   testsuite_mpi_261 \

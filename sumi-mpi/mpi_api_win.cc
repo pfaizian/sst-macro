@@ -43,7 +43,8 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include <sprockit/stl_string.h>
-#include <sumi-mpi/mpi_api.h>
+#include <sumi-mpi/mpi_api.h> 
+#include <iostream>
 
 namespace sumi {
 
@@ -129,13 +130,17 @@ int mpi_api::win_get_attr(MPI_Win win, int win_keyval, void *attribute_val, int 
   return MPI_SUCCESS;
 }
 
+// For now we will ignore the info handle
 int mpi_api::alloc_mem(MPI_Aint size, MPI_Info info, void *baseptr) {
-  spkt_abort_printf("unimplemented error: MPI_Alloc_mem");
+  // baseptr = malloc(size); // Does not work
+  *((void **) baseptr) = malloc(size);
   return MPI_SUCCESS;
 }
 
+// If we start to do something special in alloc_mem we may have to modify our
+// call to free_mem
 int mpi_api::free_mem(void *baseptr) {
-  spkt_abort_printf("unimplemented error: MPI_Free_mem");
+  free(baseptr);
   return MPI_SUCCESS;
 }
 

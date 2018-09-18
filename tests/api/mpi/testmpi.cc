@@ -1411,10 +1411,10 @@ int USER_MAIN(int argc, char* argv[]) {
         break;
       case TOPO_TOPOTEST:
         topotest::topotest(argc, argv);
-        break; */
-    // case RMA_ACCFENCE1:
-    //   accfence1::accfence1(argc, argv);
-    //   break;
+        break; 
+    case RMA_ACCFENCE1:
+      accfence1::accfence1(argc, argv);
+      break;*/
     case RMA_ACCFENCE2_AM:
       accfence2_am::accfence2_am(argc, argv);
       break;
