@@ -21,7 +21,6 @@ dsst++ \
 sstcc \
 libsstcc \
 dsstcc \
-runtest \
 sstcclib.py \
 configlib.py
 
