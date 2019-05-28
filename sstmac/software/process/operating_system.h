@@ -196,7 +196,7 @@ class OperatingSystem : public SubComponent
     int allocateSlot(){
       lock_.lock();
       int slot = free_slots_.back();
-      free_slots_.pop_back();;
+      free_slots_.pop_back();
       lock_.unlock();
       return slot;
     }

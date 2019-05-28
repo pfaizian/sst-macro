@@ -742,6 +742,11 @@ SkeletonASTVisitor::VisitDeclRefExpr(DeclRefExpr* expr)
   }
   //not a null variable
   maybeReplaceGlobalUse(expr, expr->getSourceRange());
+
+  if(inLiftContext_){
+    std::cout << expr->getDecl()->getType().getAsString() << std::endl;
+  }
+
   return true;
 }
 

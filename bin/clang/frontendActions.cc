@@ -140,71 +140,52 @@ struct PragmaPPCallback : public PPCallbacks {
 
 };
 
+namespace {
+template <typename T>
+void add_handler(clang::CompilerInstance &CI, clang::Preprocessor &PP,
+                 SkeletonASTVisitor &vis) {
+  PP.AddPragmaHandler("sst", new T(vis.getPragmas(), CI, vis));
+}
+}  // namespace
+
 void
 ReplaceAction::initPragmas(CompilerInstance& CI)
 {
-  CI.getPreprocessor().addPPCallbacks(llvm::make_unique<PragmaPPCallback>());
+  auto &PP = CI.getPreprocessor();
 
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTDeletePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTMallocPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTNewPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTComputePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTAlwaysComputePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTReplacePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTStartReplacePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTStopReplacePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTKeepPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTNullVariablePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTLoopCountPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTInitPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTReturnPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTGlobalVariablePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTNullTypePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTEmptyPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTKeepIfPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTMemoryPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTInsteadPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTBranchPredictPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTCallFunctionPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTOverheadPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTAdvanceTimePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTNonnullFieldsPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTNullFieldsPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTNullVariableGeneratorPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTNullVariableStopPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTMemoizeComputePragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTStackAllocPragmaHandler(visitor_.getPragmas(), CI, visitor_));
-  CI.getPreprocessor().AddPragmaHandler("sst",
-    new SSTImplicitStatePragmaHandler(visitor_.getPragmas(), CI, visitor_));
+  PP.addPPCallbacks(llvm::make_unique<PragmaPPCallback>());
+
+  add_handler<SSTDeletePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTMallocPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTNewPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTComputePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTAlwaysComputePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTReplacePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTStartReplacePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTStopReplacePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTKeepPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTNullVariablePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTLoopCountPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTInitPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTReturnPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTLiftPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTGlobalVariablePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTNullTypePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTEmptyPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTKeepIfPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTMemoryPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTInsteadPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTBranchPredictPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTCallFunctionPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTOverheadPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTAdvanceTimePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTNonnullFieldsPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTNullFieldsPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTNullVariableGeneratorPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTNullVariableStopPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTMemoizeComputePragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTStackAllocPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTImplicitStatePragmaHandler>(CI,PP,visitor_);
 }
 
 void
@@ -229,10 +210,8 @@ ReplaceAction::EndSourceFileAction()
 #else
   llvm::raw_fd_ostream fs(sstSourceFile, rc, llvm::sys::fs::F_RW);
 #endif
-  rewriter_.getEditBuffer(rewriter_.getSourceMgr().getMainFileID()).write(fs);
+  rewriter_.getEditBuffer(SM.getMainFileID()).write(fs);
   fs.close();
-
-
 
   std::ofstream ofs(sstGlobalFile.c_str());
   if (ofs.good()){

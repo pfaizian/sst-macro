@@ -50,10 +50,6 @@ using namespace clang;
 using namespace clang::driver;
 using namespace clang::tooling;
 
-#define lexify(x) \
-  PP.Lex(x); std::cout << x.getName(); \
-  if (x.getKind() == tok::identifier) std::cout << " " << x.getIdentifierInfo()->getNameStart(); \
-  std::cout << std::endl;
 
 static int pragmaDepth = 0;
 static int maxPragmaDepth = 0;

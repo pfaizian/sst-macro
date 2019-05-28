@@ -219,6 +219,18 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
     return ci_->getLangOpts().CPlusPlus;
   }
 
+  /// A lift context is a context where we are going to be copying code into a
+  /// function to give us easier access to it in the llvm backend. 
+  bool inLiftContext() const {
+    return inLiftContext_;
+  }
+
+  /// When a src2src transformation involves wrapping the transformed code in a
+  /// function we need to first set the lift context to true
+  void setLiftContext(bool b) {
+    inLiftContext_ = b;
+  }
+
   std::string needGlobalReplacement(clang::NamedDecl* decl) {
     const clang::Decl* md = mainDecl(decl);
     if (globalsTouched_.empty()){
@@ -528,6 +540,7 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
   std::map<clang::RecordDecl*,clang::TypedefDecl*> typedefStructs_;
   SSTPragmaList pragmas_;
   bool visitingGlobal_;
+  bool inLiftContext_ = false;
   std::set<clang::FunctionDecl*> templateDefinitions_;
   std::list<clang::CXXConstructorDecl*> ctorContexts_;
   GlobalVarNamespace& globalNs_;

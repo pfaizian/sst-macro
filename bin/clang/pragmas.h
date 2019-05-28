@@ -184,6 +184,16 @@ class SSTReturnPragma : public SSTPragma {
   std::string repl_;
 };
 
+class SSTLiftPragma : public SSTPragma {
+ public:
+  SSTLiftPragma(clang::CompilerInstance& CI) : SSTPragma(Lift) {}
+
+ private:
+  void activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg) override;
+  void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg) override;
+  void deactivate(PragmaConfig& cfg) override;
+};
+
 class SSTGlobalVariablePragma : public SSTPragma {
  public:
   SSTGlobalVariablePragma(clang::CompilerInstance& CI,
@@ -511,15 +521,9 @@ struct SSTPragmaList {
   }
 
   void erase(SSTPragma* prg){
-    auto end=pragmas.end();
-    for (auto iter=pragmas.begin(); iter != end; ++iter){
-      SSTPragma* test = *iter;
-      if (test == prg){
-        pragmas.erase(iter);
-        return;
-      }
-    }
+    pragmas.erase(std::find(pragmas.begin(), pragmas.end(), prg));
   }
+
 
   template <class T>
   std::list<SSTPragma*>
@@ -815,6 +819,19 @@ class SSTReturnPragmaHandler : public SSTPragmaHandler
 
 };
 
+class SSTLiftPragmaHandler : public SSTPragmaHandler
+{
+ public:
+  SSTLiftPragmaHandler(SSTPragmaList& plist,
+                        clang::CompilerInstance& CI,
+                        SkeletonASTVisitor& visitor) :
+     SSTPragmaHandler("lift", plist, CI, visitor){}
+
+ private:
+  SSTPragma* handleSSTPragma(const std::list<clang::Token> &tokens) const override;
+
+};
+
 class SSTBranchPredictPragmaHandler : public SSTPragmaHandler
 {
  public:
@@ -876,7 +893,7 @@ class SSTNonnullFieldsPragmaHandler : public SSTPragmaHandler
     SSTPragmaHandler("nonnull_fields", plist, CI, visitor){}
 
  private:
-  SSTPragma* handleSSTPragma(const std::list<clang::Token> &tokens) const;
+  SSTPragma* handleSSTPragma(const std::list<clang::Token> &tokens) const override;
 };
 
 class SSTNullFieldsPragmaHandler : public SSTPragmaHandler
@@ -888,7 +905,7 @@ class SSTNullFieldsPragmaHandler : public SSTPragmaHandler
    SSTPragmaHandler("null_fields", plist, CI, visitor){}
 
  private:
-  SSTPragma* handleSSTPragma(const std::list<clang::Token> &tokens) const;
+  SSTPragma* handleSSTPragma(const std::list<clang::Token> &tokens) const override;
 };
 
 class SSTStackAllocPragma : public SSTPragma
