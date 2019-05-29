@@ -287,6 +287,7 @@ SSTStringMapPragmaHandler::handleSSTPragma(const std::list<clang::Token>& tokens
         argList.push_back(sstr.str());
         sstr.str("");
         allArgs[argName] = std::move(argList);
+        argList = std::list<std::string>{};
       } else {
         tokenToString(t, sstr, ci_);
       }
@@ -311,13 +312,6 @@ SSTStringMapPragmaHandler::handleSSTPragma(const std::list<clang::Token>& tokens
 void
 SSTDeletePragma::activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg){
   replace(s,r,"",*CI);
-  switch(s->getStmtClass()){
-  case Stmt::ForStmtClass:
-  case Stmt::CompoundStmtClass:
-    break;
-  default:
-    break;
-  }
   throw StmtDeleteException(s);
 }
 
@@ -330,7 +324,9 @@ void
 SSTEmptyPragma::activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg){
   std::stringstream sstr;
   sstr << "{" << body_;
-  if (body_.size()) sstr << ";";
+  if (!body_.empty()) {
+    sstr << ";";
+  }
   sstr << "}";
 #define prg_case(x,d) case Decl::x: replace(cast<x##Decl>(d)->getBody(), r, sstr.str(),*CI); break
   switch (d->getKind()){
@@ -821,9 +817,13 @@ static void addFields(RecordDecl* rd, PragmaConfig& cfg, bool defaultNull,
       FieldDecl* fd = cast<FieldDecl>(d);
       auto iter = fields.find(fd->getName());
       if (iter == fields.end()){
-        if (defaultNull) cfg.nullVariables[fd] = prg;
+        if (defaultNull) {
+          cfg.nullVariables[fd] = prg;
+        }
       } else {
-        if (!defaultNull) cfg.nullVariables[fd] = prg;
+        if (!defaultNull) {
+          cfg.nullVariables[fd] = prg;
+        }
         fields.erase(iter);
       }
     }
@@ -1096,7 +1096,7 @@ SSTStackAllocPragmaHandler::allocatePragma(const std::map<std::string, std::list
 void
 SSTStackAllocPragma::activate(Stmt *s, Rewriter &r, PragmaConfig &cfg)
 {
-  if (toFree_.size()){
+  if (!toFree_.empty()){
     std::string repl = "sstmac_free_stack(" + toFree_ + ")";
     replace(s, r, repl, *CI);
     throw StmtDeleteException(s);

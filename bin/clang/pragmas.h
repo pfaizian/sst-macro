@@ -57,8 +57,8 @@ struct SSTReplacePragma;
 struct SSTNullVariablePragma;
 struct SSTNullVariableGeneratorPragma;
 struct PragmaConfig {
-  int pragmaDepth;
-  bool makeNoChanges;
+  int pragmaDepth = 0;
+  bool makeNoChanges = false;
   std::map<std::string,SSTReplacePragma*> replacePragmas;
   std::map<clang::Decl*,SSTNullVariablePragma*> nullVariables;
   std::map<clang::FunctionDecl*,std::set<SSTPragma*>> functionPragmas;
@@ -67,18 +67,20 @@ struct PragmaConfig {
   std::set<std::string> newParams;
   std::string dependentScopeGlobal;
   SkeletonASTVisitor* astVisitor;
-  PragmaConfig() : pragmaDepth(0),
-    makeNoChanges(false),
-    nullifyDeclarationsPragma(nullptr)
-  {}
   std::string computeMemorySpec;
   std::list<std::pair<SSTNullVariablePragma*,clang::TypedefDecl*>> pendingTypedefs;
   SSTNullVariableGeneratorPragma* nullifyDeclarationsPragma;
+
+  PragmaConfig() : pragmaDepth(0),
+    makeNoChanges(false),
+    astVisitor(nullptr),
+    nullifyDeclarationsPragma(nullptr)
+  {}
 };
 
 struct SSTPragmaList;
 struct SSTPragma {
-  typedef enum {
+  using class_t = enum {
     Replace=0,
     Delete=1,
     Compute=2,
@@ -104,8 +106,10 @@ struct SSTPragma {
     StopNullDeclarations=22,
     Memoize=23,
     StackAlloc=24,
-    ImplicitState=25
-  } class_t;
+    ImplicitState=25,
+    Lift=26
+  };
+
   clang::StringRef name;
   clang::SourceLocation pragmaDirectiveLoc;
   clang::SourceLocation startPragmaLoc;
@@ -148,7 +152,7 @@ struct SSTPragma {
     return false;
   }
 
-  SSTPragma(class_t _cls) : cls(_cls){}
+  explicit SSTPragma(class_t _cls) : cls(_cls){}
 
   virtual void activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg) = 0;
   virtual void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig &cfg){} //not required
@@ -186,7 +190,7 @@ class SSTReturnPragma : public SSTPragma {
 
 class SSTLiftPragma : public SSTPragma {
  public:
-  SSTLiftPragma(clang::CompilerInstance& CI) : SSTPragma(Lift) {}
+  explicit SSTLiftPragma(clang::CompilerInstance& CI) : SSTPragma(Lift) {}
 
  private:
   void activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg) override;
@@ -243,7 +247,7 @@ class SSTNullVariablePragma : public SSTPragma {
   }
 
   bool isTransitive() const {
-    return transitiveFrom_;
+    return transitiveFrom_ == nullptr;
   }
 
   clang::NamedDecl* getAppliedDecl() const {
@@ -303,11 +307,11 @@ class SSTNullVariablePragma : public SSTPragma {
     cln->skelComputes_ = skelComputes_;
   }
 
-  SSTNullVariablePragma(SSTPragma::class_t cls) : SSTPragma(cls){}
+  explicit SSTNullVariablePragma(SSTPragma::class_t cls) : SSTPragma(cls){}
 
   void doActivate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg);
 
-  virtual void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg) override;
+  void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg) override;
   void activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg) override;
 
   clang::NamedDecl* declAppliedTo_;
@@ -377,7 +381,7 @@ class SSTNullTypePragma : public SSTNullVariablePragma
   std::string newType_;
 
   //for cloning
-  SSTNullTypePragma(){}
+  SSTNullTypePragma() = default;
 
 };
 
@@ -391,7 +395,7 @@ class SSTDeletePragma : public SSTPragma {
 
 class SSTEmptyPragma : public SSTPragma {
  public:
-  SSTEmptyPragma(const std::string& body) : SSTPragma(Delete), body_(body) {}
+  explicit SSTEmptyPragma(const std::string& body) : SSTPragma(Delete), body_(body) {}
  private:
   void activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg) override;
   void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg) override;
@@ -409,9 +413,9 @@ class SSTKeepPragma : public SSTPragma {
  public:
   SSTKeepPragma() : SSTPragma(Keep) {}
  protected:
-  virtual void activate(clang::Stmt *s, clang::Rewriter &r, PragmaConfig &cfg) override;
+  void activate(clang::Stmt *s, clang::Rewriter &r, PragmaConfig &cfg) override;
 
-  virtual void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg) override;
+  void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg) override;
 
   void deactivate(PragmaConfig &cfg) override {
     cfg.makeNoChanges = false;
@@ -424,7 +428,7 @@ class SSTKeepIfPragma : public SSTPragma {
     : ifCond_(ifCond), SSTPragma(KeepIf)
   {}
  private:
-  void activate(clang::Stmt *s, clang::Rewriter &r, PragmaConfig &cfg);
+  void activate(clang::Stmt *s, clang::Rewriter &r, PragmaConfig &cfg) override;
   std::string ifCond_;
 };
 
@@ -463,7 +467,7 @@ class SSTAdvanceTimePragma : public SSTPragma {
   {}
 
  private:
-  void activate(clang::Stmt *s, clang::Rewriter &r, PragmaConfig &cfg);
+  void activate(clang::Stmt *s, clang::Rewriter &r, PragmaConfig &cfg) override;
   std::string units_;
   std::string amount_;
 };
@@ -621,7 +625,7 @@ class SSTPragmaHandler : public clang::PragmaHandler {
    * @param PP
    * @param pragma
    */
-  void configure(clang::Token& PragmaTok, clang::Preprocessor& PP, SSTPragma* pragma);
+  void configure(clang::Token& PragmaTok, clang::Preprocessor& PP, SSTPragma* fsp);
 
   virtual SSTPragma* handleSSTPragma(const std::list<clang::Token>& tokens) const = 0;
 
