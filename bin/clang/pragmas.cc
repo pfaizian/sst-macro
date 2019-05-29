@@ -166,6 +166,7 @@ SSTPragmaHandler::configure(Token& PragmaTok, Preprocessor& PP, SSTPragma* fsp)
     case SSTPragma::AdvanceTime:
     case SSTPragma::Overhead:
     case SSTPragma::StackAlloc:
+    case SSTPragma::Lift:
     case SSTPragma::Keep: //always obey these
       pragmas_.push_back(fsp);
       break;
@@ -550,6 +551,29 @@ SSTReturnPragma::activate(Decl* d, Rewriter& r, PragmaConfig& cfg)
   }
   std::string repl = "{ return " + repl_ + "; }";
   replace(fd->getBody(), r, repl, *CI);
+}
+
+void
+SSTLiftPragma::activate(Stmt *s, Rewriter &r, PragmaConfig &cfg)
+{
+  auto vis = *cfg.astVisitor;
+  if(vis.inLiftContext()){
+    errorAbort(s, *CI, "pragma lift applied while already in a lifting context.");
+  }
+
+  cfg.astVisitor->setLiftContext(true);
+}
+
+void
+SSTLiftPragma::deactivate(PragmaConfig &cfg)
+{
+  cfg.astVisitor->setLiftContext(false);
+}
+
+void
+SSTLiftPragma::activate(Decl* d, Rewriter& r, PragmaConfig& cfg)
+{
+  std::cout << "I hit a DECL, if I was JJW I'd put song lyrics here.\n";
 }
 
 void
@@ -994,6 +1018,14 @@ SSTReturnPragmaHandler::handleSSTPragma(const std::list<Token> &tokens) const
   std::stringstream sstr;
   SSTPragma::tokenStreamToString(tokens.begin(), tokens.end(), sstr, ci_);
   return new SSTReturnPragma(ci_, sstr.str());
+}
+
+SSTPragma*
+SSTLiftPragmaHandler::handleSSTPragma(const std::list<Token> &tokens) const
+{
+  std::stringstream sstr;
+  SSTPragma::tokenStreamToString(tokens.begin(), tokens.end(), sstr, ci_);
+  return new SSTLiftPragma(ci_);
 }
 
 SSTPragma*
