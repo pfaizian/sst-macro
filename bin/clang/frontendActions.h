@@ -75,11 +75,11 @@ class ReplaceAction : public clang::ASTFrontendAction {
  private:
   void initPragmas(clang::CompilerInstance& CI);
 
-  SkeletonASTVisitor visitor_;
+  PragmaConfig prgConfig_;
   clang::Rewriter rewriter_;
   GlobalVarNamespace globalNs_;
   clang::CompilerInstance* ci_;
-  PragmaConfig prgConfig_;
+  SkeletonASTVisitor visitor_;
 };
 
 #endif

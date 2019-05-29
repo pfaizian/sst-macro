@@ -66,16 +66,12 @@ struct PragmaConfig {
   std::set<const clang::DeclRefExpr*> deletedRefs;
   std::set<std::string> newParams;
   std::string dependentScopeGlobal;
-  SkeletonASTVisitor* astVisitor;
+  SkeletonASTVisitor* astVisitor = nullptr;
   std::string computeMemorySpec;
   std::list<std::pair<SSTNullVariablePragma*,clang::TypedefDecl*>> pendingTypedefs;
-  SSTNullVariableGeneratorPragma* nullifyDeclarationsPragma;
+  SSTNullVariableGeneratorPragma* nullifyDeclarationsPragma = nullptr;
 
-  PragmaConfig() : pragmaDepth(0),
-    makeNoChanges(false),
-    astVisitor(nullptr),
-    nullifyDeclarationsPragma(nullptr)
-  {}
+  PragmaConfig() = default;
 };
 
 struct SSTPragmaList;
