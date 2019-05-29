@@ -1114,11 +1114,11 @@ struct PragmaActivateGuard {
        SSTPragmaList& pragmas,
        bool doVisit, bool firstPass,
        bool skeletonizing, bool memoizing) :
+    skeletonizing_(skeletonizing),
+    memoizing_(memoizing),
     pragmaConfig_(cfg),
     rewriter_(rewriter),
-    pragmas_(pragmas),
-    skeletonizing_(skeletonizing),
-    memoizing_(memoizing)
+    pragmas_(pragmas)
   {
     ++pragmaConfig_.pragmaDepth;
     myPragmas_ = pragmas_.getMatches<T>(t, firstPass);
