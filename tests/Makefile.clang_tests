@@ -37,6 +37,7 @@ CLANGTESTS = \
   pragma_sst_replace \
   pragma_sst_memory \
   pragma_sst_compute \
+  pragma_sst_lift \
   pragma_sst_compute_global_var \
   pragma_sst_loop_count \
   pragma_omp_parallel_nthr \
