@@ -224,48 +224,10 @@ SSTPragmaHandler::HandlePragma(Preprocessor &PP, PragmaIntroducerKind /* Introdu
   configure(PragmaTok, PP, fsp);
 }
 
-static std::string getStringToken(const Token& next, clang::CompilerInstance& ci)
-{
-  //the next token should be a string naming the argument
-  std::string argName;
-  switch (next.getKind()){
-    case tok::string_literal:
-      argName = next.getLiteralData();
-      break;
-    case tok::identifier:
-      argName = next.getIdentifierInfo()->getName().str();
-      break;
-    default: {
-      std::string error = std::string("invalid pragma token of type ") + next.getName()
-         + " - expected string literal argument name";
-      errorAbort(next.getLocation(), ci, error);
-    }
-  }
-  return argName;
-}
-
-static void assertToken(const Token& tok, tok::TokenKind kind, clang::CompilerInstance& ci)
-{
-  if (tok.getKind() != kind){
-    std::string error = std::string("invalid pragma token of type ") + tok.getName()
-       + " - expected " + tok::getTokenName(kind);
-    errorAbort(tok.getLocation(), ci, error);
-  }
-}
-
 SSTPragma*
 SSTStringMapPragmaHandler::handleSSTPragma(const std::list<clang::Token>& tokens) const
 {
   std::map<std::string, std::list<std::string>> allArgs;
-  auto iter = tokens.begin();
-  auto incrementIter = [&](){
-    ++iter;
-    if (iter == tokens.end()){
-      errorAbort(pragmaLoc_, ci_,
-       "mis-formatted pragma, pragma modifiers should be of the form 'arg(a)' or 'arg(a,b)'");
-    }
-  };
-
 
   int parenDepth = 0;
   std::list<std::string> argList;
