@@ -54,22 +54,24 @@ class SkeletonASTVisitor;
 
 struct SSTPragma;
 struct SSTReplacePragma;
-struct SSTNullVariablePragma;
-struct SSTNullVariableGeneratorPragma;
+class SSTNullVariablePragma;
+class SSTNullVariableGeneratorPragma;
+
 struct PragmaConfig {
-  int pragmaDepth = 0;
-  bool makeNoChanges = false;
   std::map<std::string,SSTReplacePragma*> replacePragmas;
-  std::map<clang::Decl*,SSTNullVariablePragma*> nullVariables;
+  std::map<clang::Decl*, SSTNullVariablePragma*> nullVariables;
   std::map<clang::FunctionDecl*,std::set<SSTPragma*>> functionPragmas;
   std::map<const clang::DeclContext*,SSTNullVariablePragma*> nullSafeFunctions;
   std::set<const clang::DeclRefExpr*> deletedRefs;
   std::set<std::string> newParams;
   std::string dependentScopeGlobal;
-  SkeletonASTVisitor* astVisitor = nullptr;
   std::string computeMemorySpec;
   std::list<std::pair<SSTNullVariablePragma*,clang::TypedefDecl*>> pendingTypedefs;
+
+  int pragmaDepth = 0;
+  bool makeNoChanges = false;
   SSTNullVariableGeneratorPragma* nullifyDeclarationsPragma = nullptr;
+  SkeletonASTVisitor* astVisitor = nullptr;
 
   PragmaConfig() = default;
 };
@@ -186,7 +188,7 @@ class SSTReturnPragma : public SSTPragma {
 
 class SSTLiftPragma : public SSTPragma {
  public:
-  explicit SSTLiftPragma(clang::CompilerInstance& CI) : SSTPragma(Lift) {}
+  explicit SSTLiftPragma() : SSTPragma(Lift) {}
 
  private:
   void activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg) override;
