@@ -44,6 +44,7 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include "pragmas.h"
 #include "astVisitor.h"
+#include "liftedContext.h"
 #include <sstream>
 
 using namespace clang;
@@ -510,11 +511,7 @@ void
 SSTLiftPragma::activate(Stmt *s, Rewriter & /* r */, PragmaConfig &cfg)
 {
   auto vis = *cfg.astVisitor;
-  if(vis.inLiftContext()){
-    errorAbort(s, *CI, "pragma lift applied while already in a lifting context.");
-  }
-
-  cfg.astVisitor->setLiftContext(true);
+  lc_ = vis.addLiftingContext(s);
 }
 
 
@@ -522,17 +519,16 @@ void
 SSTLiftPragma::activate(Decl* d, Rewriter&  /* r */, PragmaConfig&   cfg)
 {
   auto vis = *cfg.astVisitor;
-  if(vis.inLiftContext()){
-    errorAbort(d, *CI, "pragma lift applied while already in a lifting context.");
-  }
-
-  cfg.astVisitor->setLiftContext(true);
+  
+  std::cout << "WAT\n";
+  // cfg.astVisitor->setLiftContext(true);
 }
 
 void
 SSTLiftPragma::deactivate(PragmaConfig &cfg)
-{
-  cfg.astVisitor->setLiftContext(false);
+{ 
+  // This is where we will write our replacement
+  lc_->write_lifted_function(std::cout);
 }
 
 void

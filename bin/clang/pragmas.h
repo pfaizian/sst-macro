@@ -48,6 +48,7 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include "clangHeaders.h"
 #include "util.h"
+#include "clang/liftedContext.h"
 #include <set>
 
 class SkeletonASTVisitor;
@@ -194,6 +195,8 @@ class SSTLiftPragma : public SSTPragma {
   void activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg) override;
   void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg) override;
   void deactivate(PragmaConfig& cfg) override;
+
+  LiftingContext *lc_ = nullptr;
 };
 
 class SSTGlobalVariablePragma : public SSTPragma {

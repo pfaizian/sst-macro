@@ -48,6 +48,8 @@ Questions? Contact sst-macro-help@sandia.gov
 #include "clangHeaders.h"
 #include "pragmas.h"
 #include "globalVarNamespace.h"
+#include "liftedContext.h"
+#include "clang/AST/Stmt.h"
 
 #include <unordered_set>
 
@@ -355,17 +357,10 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
     return ci_->getLangOpts().CPlusPlus;
   }
 
-  /// A lift context is a context where we are going to be copying code into a
-  /// function to give us easier access to it in the llvm backend. 
-  bool inLiftContext() const {
-    return inLiftContext_;
-  }
-
-  /// When a src2src transformation involves wrapping the transformed code in a
-  /// function we need to first set the lift context to true
-  void setLiftContext(bool b) {
-    inLiftContext_ = b;
-  }
+  LiftingContext *addLiftingContext(clang::Stmt const*s){
+    liftContexts_.emplace_back(s, ci_->getASTContext());
+    return &liftContexts_.back();
+  };
 
   std::string needGlobalReplacement(clang::NamedDecl* decl) {
     const clang::Decl* md = mainDecl(decl);
@@ -964,7 +959,6 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
   void setFundamentalTypes(clang::QualType qt, cArrayConfig& cfg);
 
 
-
   void reconstructType(clang::SourceLocation typeDeclCutoff,
                       clang::QualType qt, ReconstructedType& rt,
                       std::map<const clang::RecordDecl*, ReconstructedType>& newTypes);
@@ -1070,8 +1064,9 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
   std::set<std::string> sstmacFxnPrepends_;
   std::map<std::string, MPI_Call> mpiCalls_;
 
+  std::list<LiftingContext> liftContexts_;
+
   bool visitingGlobal_ = false;
-  bool inLiftContext_ = false;
   bool keepGlobals_ = false;
   bool foundCMain_ = false;
   bool refactorMain_ = true;

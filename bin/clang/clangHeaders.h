@@ -45,6 +45,11 @@ Questions? Contact sst-macro-help@sandia.gov
 #ifndef CLANGHEADERS_H
 #define CLANGHEADERS_H
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wall"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wextra"
+
 #include "clang/Parse/Parser.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -64,6 +69,9 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <clang/Sema/Sema.h>
 #include <clang/Basic/Version.h>
 #include <llvm/Support/CommandLine.h>
+
+#pragma clang diagnostic pop
+#pragma clang diagnostic pop
 
 #define UNARYOP_LIST()                                                         \
   OPERATOR(PostInc) OPERATOR(PostDec) OPERATOR(PreInc) OPERATOR(PreDec)        \

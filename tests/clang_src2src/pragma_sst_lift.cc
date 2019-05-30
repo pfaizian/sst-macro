@@ -1,10 +1,14 @@
 
-double fxn(double const* __restrict__ a, int N) {
-  double b = 0;
+double fxn(double const* __restrict__ a, int N, double &c) {
+  double b = 0.0;
 
 #pragma sst lift
   for(auto i = 0; i < N; ++i){
+    int d = i - 1;
     b += a[i];
+    if(i % 2 == 0){
+      c += a[i] + d;
+    }
   }
 
   return b;
@@ -21,8 +25,8 @@ int main() {
     a[i] = (i * circ_in_yards) / my_pi;
   }
    
-  // Be mean to the optimizer
-  a[0] = fxn(a, N);
+  double c = 0.0;
+  a[0] = fxn(a,N,c);
 
   return 0; 
 }
