@@ -803,8 +803,7 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
                      clang::ValueDecl* member = nullptr);
 
 
-  friend class PragmaActivateGuard;
-
+  friend struct PragmaActivateGuard;
 
 
   typedef void (SkeletonASTVisitor::*MPI_Call)(clang::CallExpr* expr);

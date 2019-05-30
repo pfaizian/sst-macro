@@ -388,7 +388,7 @@ SkeletonASTVisitor::TraverseCXXDeleteExpr(CXXDeleteExpr* expr, DataRecursionQueu
 }
 
 bool
-SkeletonASTVisitor::TraverseInitListExpr(InitListExpr* expr, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseInitListExpr(InitListExpr* expr, DataRecursionQueue* /* queue */)
 {
   if (visitingGlobal_){
     QualType qty = expr->getType();
@@ -486,7 +486,7 @@ SkeletonASTVisitor::checkNullAssignments(clang::NamedDecl* src, bool hasReplacem
   }
 
   Expr* outermost = nullptr;
-  for (int i=activeBinOpIdx_; i < binOps_.size(); ++i){
+  for (unsigned long i=activeBinOpIdx_; i < binOps_.size(); ++i){
     auto& pair = binOps_[i];
     BinaryOperator* binOp = pair.first;
     BinOpSide side = pair.second;
@@ -1447,7 +1447,7 @@ SkeletonASTVisitor::addInitializers(VarDecl *D, std::ostream &os, bool leadingCo
   case Stmt::InitListExprClass: {
     InitListExpr* init = cast<InitListExpr>(ue);
     if (init->getNumInits() == 0) return false;
-    for (int i=0; i < init->getNumInits(); ++i){
+    for (auto i=0U; i < init->getNumInits(); ++i){
       //for now just print the expression
       if (i > 0 || leadingComma) os << ",";
       os << getExprString(init->getInit(i));
@@ -1800,7 +1800,7 @@ SkeletonASTVisitor::setupGlobalVar(const std::string& varnameScopeprefix,
     std::string standinName = "sstmac_";
     if (needClsScope){
       std::string uniqueNsPrefix = currentNs_->nsPrefix() + clsScopePrefix;
-      for (int i=0; i < uniqueNsPrefix.size(); ++i){
+      for (auto i=0U; i < uniqueNsPrefix.size(); ++i){
         char& next = uniqueNsPrefix.at(i);
         if (next == ':') next = '_';
       }
@@ -2051,11 +2051,6 @@ SkeletonASTVisitor::deleteStmt(Stmt *s)
 {
   //go straight to replace, don't delay this
   ::replace(s, rewriter_, "", *ci_);
-}
-
-static bool isCombinedDecl(VarDecl* vD, RecordDecl* rD)
-{
-  return getStart(vD) <= getStart(rD) && getEnd(rD) <= getEnd(vD);
 }
 
 bool
@@ -2901,7 +2896,7 @@ SkeletonASTVisitor::VisitCXXDependentScopeMemberExpr(clang::CXXDependentScopeMem
 }
 
 bool
-SkeletonASTVisitor::TraverseCompoundStmt(CompoundStmt* stmt, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseCompoundStmt(CompoundStmt* stmt, DataRecursionQueue* /* queue */)
 {
   try {
     PragmaActivateGuard pag(stmt, this);
@@ -3036,7 +3031,7 @@ SkeletonASTVisitor::addRelocation(UnaryOperator* op, DeclRefExpr* dr, ValueDecl*
 }
 
 bool
-SkeletonASTVisitor::TraverseUnaryOperator(UnaryOperator* op, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseUnaryOperator(UnaryOperator* op, DataRecursionQueue* /* queue */)
 {
   //VisitStmt(op);
   if (activeGlobal() && op->getOpcode() == UO_AddrOf){
@@ -3191,7 +3186,7 @@ SkeletonASTVisitor::TraverseDeclStmt(DeclStmt* stmt, DataRecursionQueue* /* queu
 }
 
 bool
-SkeletonASTVisitor::TraverseDoStmt(DoStmt* S, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseDoStmt(DoStmt* S, DataRecursionQueue* /* queue */)
 {
   try {
     PragmaActivateGuard pag(S, this);
@@ -3416,7 +3411,7 @@ SkeletonASTVisitor::propagateNullness(Decl* target, Decl* src)
 }
 
 void
-SkeletonASTVisitor::nullifyIfStmt(IfStmt* if_stmt, Decl* d)
+SkeletonASTVisitor::nullifyIfStmt(IfStmt* if_stmt, Decl* /* d */)
 {
   //oooooh, not good - I could really foobar things here
   //crash and burn and tell programmer to fix it
