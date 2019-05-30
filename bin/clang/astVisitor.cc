@@ -45,6 +45,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include "astVisitor.h"
 #include "replacePragma.h"
 #include "computePragma.h"
+#include "clang/AST/ASTConsumer.h"
 #include <sys/time.h>
 #include <iostream>
 #include <fstream>
@@ -108,11 +109,11 @@ void
 ASTVisitorCmdLine::setup()
 {
   const char* skelStr = getenv("SSTMAC_SKELETONIZE");
-  if (skelStr){
+  if (skelStr != nullptr){
     runSkeletonize = atoi(skelStr);
   }
 
-  if (skeletonizeOpt.getNumOccurrences()){
+  if (skeletonizeOpt.getNumOccurrences() != 0){
     //this overwrites anything from the environment
     runSkeletonize = true;
     StringRef sref(skeletonizeOpt);
@@ -120,11 +121,11 @@ ASTVisitorCmdLine::setup()
   }
 
   const char* memoStr = getenv("SSTMAC_MEMOIZE");
-  if (memoStr){
+  if (memoStr != nullptr){
     runMemoize = atoi(memoStr);
   }
 
-  if (memoizeOpt.getNumOccurrences()){
+  if (memoizeOpt.getNumOccurrences() != 0){
     //this overwrites anything from the environment
     runMemoize = true;
     StringRef sref(memoizeOpt);
@@ -132,7 +133,7 @@ ASTVisitorCmdLine::setup()
   }
 
   const char* mainStr = getenv("SSTMAC_REFACTOR_MAIN");
-  if (mainStr){
+  if (mainStr != nullptr){
     refactorMain = atoi(mainStr);
   }
 
@@ -289,7 +290,7 @@ SkeletonASTVisitor::shouldVisitDecl(VarDecl* D)
     //we are inside a header
     char fullpathBuffer[1024];
     const char* fullpath = realpath(ploc.getFilename(), fullpathBuffer);
-    if (fullpath){
+    if (fullpath != nullptr){
       //is this in the list of valid headers
       bool valid = validHeaders_.find(fullpath) != validHeaders_.end();
       if (!valid){
@@ -366,18 +367,18 @@ SkeletonASTVisitor::shouldVisitDecl(VarDecl* D)
 
 
 bool
-SkeletonASTVisitor::VisitCXXNewExpr(CXXNewExpr *expr)
+SkeletonASTVisitor::VisitCXXNewExpr(CXXNewExpr * /* expr */)
 {
   return true; //don't do this anymore
 }
 
 
 bool
-SkeletonASTVisitor::TraverseCXXDeleteExpr(CXXDeleteExpr* expr, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseCXXDeleteExpr(CXXDeleteExpr* expr, DataRecursionQueue* /* queue */)
 {
   activeBinOpIdx_ = IndexResetter;
 
-  if (opts_.runSkeletonize){
+  if (ASTVisitorCmdLine::runSkeletonize){
     goIntoContext(expr, [&]{
       TraverseStmt(expr->getArgument());
     });
@@ -395,7 +396,7 @@ SkeletonASTVisitor::TraverseInitListExpr(InitListExpr* expr, DataRecursionQueue*
       const RecordType* ty = qty->getAsStructureType();
       RecordDecl* rd = ty->getDecl();
       auto iter = rd->field_begin();
-      for (int i=0; i < expr->getNumInits(); ++i, ++iter){
+      for (auto i=0U; i < expr->getNumInits(); ++i, ++iter){
         Expr* ie = const_cast<Expr*>(expr->getInit(i));
         Expr* base_ie = getUnderlyingExpr(ie);
         if (base_ie->getStmtClass() == Stmt::DeclRefExprClass){
@@ -414,7 +415,7 @@ SkeletonASTVisitor::TraverseInitListExpr(InitListExpr* expr, DataRecursionQueue*
       }
     } else {
       bool isArray = expr->getType()->isConstantArrayType();
-      for (int i=0; i < expr->getNumInits(); ++i){
+      for (auto i=0U; i < expr->getNumInits(); ++i){
         if (isArray) initIndices_.push_back(i);
         Expr* ie = const_cast<Expr*>(expr->getInit(i));
         activeInits_.push_back(getUnderlyingExpr(ie));
@@ -424,7 +425,7 @@ SkeletonASTVisitor::TraverseInitListExpr(InitListExpr* expr, DataRecursionQueue*
       }
     }
   } else {
-    for (int i=0; i < expr->getNumInits(); ++i){
+    for (auto i=0U; i < expr->getNumInits(); ++i){
       Expr* ie = const_cast<Expr*>(expr->getInit(i));
       TraverseStmt(ie);
     }
@@ -437,7 +438,7 @@ SkeletonASTVisitor::VisitCXXOperatorCallExpr(CXXOperatorCallExpr* expr)
 {
   Expr* implicitThis = expr->getArg(0);
   if (isa<MemberExpr>(implicitThis)){
-    MemberExpr* me = cast<MemberExpr>(implicitThis);
+    auto me = cast<MemberExpr>(implicitThis);
     if (isNullVariable(me->getMemberDecl())){
       errorAbort(expr, *ci_,
                  "operator used on null variable");
@@ -474,8 +475,8 @@ SkeletonASTVisitor::checkNullAssignments(clang::NamedDecl* src, bool hasReplacem
   //first check for DeclStmts
   for (Stmt* s : stmtContexts_){
     if (s->getStmtClass() == Stmt::DeclStmtClass){
-      DeclStmt* ds = cast<DeclStmt>(s);
-      Decl* lhs = ds->getSingleDecl();
+      auto ds = cast<DeclStmt>(s);
+      auto lhs = ds->getSingleDecl();
       if (lhs && lhs->getKind() == Decl::Var){
         propagateNullness(lhs, src);
         return s;
@@ -495,8 +496,8 @@ SkeletonASTVisitor::checkNullAssignments(clang::NamedDecl* src, bool hasReplacem
       Expr* lhs = getUnderlyingExpr(binOp->getLHS());
       if (lhs->getStmtClass() == Stmt::MemberExprClass){
         if (!outermost) outermost = binOp;
-        MemberExpr* expr = cast<MemberExpr>(lhs);
-        NamedDecl* member = expr->getMemberDecl();
+        auto expr = cast<MemberExpr>(lhs);
+        auto member = expr->getMemberDecl();
         if (!isNullVariable(member) && !hasReplacement){
           //oooh - not good
           std::string error = "member " + member->getNameAsString()
@@ -505,7 +506,7 @@ SkeletonASTVisitor::checkNullAssignments(clang::NamedDecl* src, bool hasReplacem
         }
       } else if (lhs->getStmtClass() == Stmt::DeclRefExprClass){
         if (!outermost)  outermost = binOp;
-        DeclRefExpr* dref = cast<DeclRefExpr>(lhs);
+        auto dref = cast<DeclRefExpr>(lhs);
         propagateNullness(dref->getFoundDecl(), src);
       }
     }
@@ -560,7 +561,7 @@ SkeletonASTVisitor::replaceNullVariableConnectedContext(Expr* expr, const std::s
     case Stmt::CXXOperatorCallExprClass:
     case Stmt::MemberExprClass:
       if (isMemberExpr){ //we can connect through implicit this
-        if (!outermost) outermost = s;
+        if (outermost == nullptr) outermost = s;
       } else {
         outermost = nullptr;
       }
@@ -568,14 +569,14 @@ SkeletonASTVisitor::replaceNullVariableConnectedContext(Expr* expr, const std::s
     case Stmt::BinaryOperatorClass:
     case Stmt::CXXDeleteExprClass:
     case Stmt::UnaryOperatorClass:
-      if (!outermost) outermost = s; //connect
+      if (outermost == nullptr) outermost = s; //connect
       break;
     default:
       break; //neither break nor add connections
     }
   }
 
-  if (outermost){
+  if (outermost != nullptr){
     //we need to delet the statement we are connected to
     replaceNullVariableStmt(outermost, repl);
   } else {
@@ -622,7 +623,7 @@ SkeletonASTVisitor::visitNullVariable(Expr* expr, NamedDecl* nd)
         //skeletonize ALL containing loops
         Stmt* loop = loopContexts_.front();
         if (loop->getStmtClass() == Stmt::ForStmtClass){
-          ForStmt* forLoop = cast<ForStmt>(loop);
+          auto forLoop = cast<ForStmt>(loop);
           SSTComputePragma::replaceForStmt(forLoop, *ci_, pragmas_, rewriter_,
                                            pragmaConfig_, this, "");
         } else {
@@ -645,7 +646,7 @@ SkeletonASTVisitor::visitNullVariable(Expr* expr, NamedDecl* nd)
         std::string fxnName;
         SourceLocation fxnDeclLoc;
         if (dc->getDeclKind() == Decl::Function){
-          const FunctionDecl* fd = cast<const FunctionDecl>(dc);
+          const auto fd = cast<const FunctionDecl>(dc);
           fxnName = fd->getNameAsString();
           fxnDeclLoc = getStart(fd);
         }
@@ -657,8 +658,9 @@ SkeletonASTVisitor::visitNullVariable(Expr* expr, NamedDecl* nd)
           sstr << fxnName << " declared at "
                << fxnDeclLoc.printToString(ci_->getSourceManager());
         }
-        if (nullVarPrg->isTransitive())
+        if (nullVarPrg->isTransitive()) {
           addTransitiveNullInformation(nd, sstr, nullVarPrg);
+        }
         errorAbort(expr, *ci_, sstr.str());
       }
     }
@@ -682,12 +684,12 @@ SkeletonASTVisitor::visitNullVariable(Expr* expr, NamedDecl* nd)
     //okay, a null is propagating to stuff
     //however, I have no replacement and so must delete completely
     if (outerMostAssignment->getStmtClass() == Stmt::BinaryOperatorClass){
-      BinaryOperator* bop = cast<BinaryOperator>(outerMostAssignment);
-      Expr* lhs = getUnderlyingExpr(bop->getLHS());
-      Expr* rhs = getUnderlyingExpr(bop->getRHS());
+      auto bop = cast<BinaryOperator>(outerMostAssignment);
+      auto lhs = getUnderlyingExpr(bop->getLHS());
+      auto rhs = getUnderlyingExpr(bop->getRHS());
       if (lhs == expr && rhs->getStmtClass() == Stmt::DeclRefExprClass){
-        DeclRefExpr* dref = cast<DeclRefExpr>(rhs);
-        NamedDecl* rnd = dref->getFoundDecl();
+        auto dref = cast<DeclRefExpr>(rhs);
+        auto rnd = dref->getFoundDecl();
         if (!isNullVariable(rnd->getCanonicalDecl())){
           std::string warning = "assigning to null " + nd->getNameAsString()
               + " directly from a non-null variable - skeletonization might be missed";
@@ -705,8 +707,9 @@ SkeletonASTVisitor::visitNullVariable(Expr* expr, NamedDecl* nd)
       std::stringstream sstr;
       sstr << "variable " << nd->getNameAsString() << " is a null_variable "
            << " and passed to a function with no replacement specified ";
-      if (nullVarPrg->isTransitive())
+      if (nullVarPrg->isTransitive()){
         addTransitiveNullInformation(nd, sstr, nullVarPrg);
+      }
       errorAbort(expr, *ci_, sstr.str());
     }
     replaceNullVariableConnectedContext(expr, "");
@@ -714,7 +717,7 @@ SkeletonASTVisitor::visitNullVariable(Expr* expr, NamedDecl* nd)
 }
 
 bool
-SkeletonASTVisitor::TraverseDecltypeTypeLoc(DecltypeTypeLoc loc)
+SkeletonASTVisitor::TraverseDecltypeTypeLoc(DecltypeTypeLoc /* loc */)
 {
   //don't visit decltype expressions... just let them go
   return true;
@@ -753,7 +756,7 @@ SkeletonASTVisitor::VisitDeclRefExpr(DeclRefExpr* expr)
 void
 SkeletonASTVisitor::visitCollective(CallExpr *expr)
 {
-  if (opts_.runSkeletonize){
+  if (ASTVisitorCmdLine::runSkeletonize){
       //first buffer argument to nullptr
       if (expr->getArg(0)->getType()->isPointerType()){
         //make sure this isn't a shortcut function without buffers
@@ -770,7 +773,7 @@ SkeletonASTVisitor::visitCollective(CallExpr *expr)
 void
 SkeletonASTVisitor::visitReduce(CallExpr *expr)
 {
-  if (opts_.runSkeletonize){
+  if (ASTVisitorCmdLine::runSkeletonize){
     //first buffer argument to nullptr
     if (expr->getArg(0)->getType()->isPointerType()){
       //make sure this isn't a shortcut function without buffers
@@ -787,7 +790,7 @@ SkeletonASTVisitor::visitReduce(CallExpr *expr)
 void
 SkeletonASTVisitor::visitPt2Pt(CallExpr *expr)
 {
-  if (opts_.runSkeletonize){
+  if (ASTVisitorCmdLine::runSkeletonize){
     //first buffer argument to nullptr
     if (expr->getArg(0)->getType()->isPointerType()){
       //make sure this isn't a shortcut function without buffers
@@ -798,7 +801,7 @@ SkeletonASTVisitor::visitPt2Pt(CallExpr *expr)
   }
 }
 bool 
-SkeletonASTVisitor::TraverseReturnStmt(clang::ReturnStmt* stmt, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseReturnStmt(clang::ReturnStmt* stmt, DataRecursionQueue* /* queue */)
 {
   PragmaActivateGuard pag(stmt, this);
   if (pag.skipVisit()) return true;
@@ -809,7 +812,7 @@ SkeletonASTVisitor::TraverseReturnStmt(clang::ReturnStmt* stmt, DataRecursionQue
 }
 
 bool
-SkeletonASTVisitor::TraverseCXXMemberCallExpr(CXXMemberCallExpr* expr, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseCXXMemberCallExpr(CXXMemberCallExpr* expr, DataRecursionQueue* /* queue */)
 {
   PragmaActivateGuard pag(expr, this);
   if (pag.skipVisit()) return true;
@@ -838,7 +841,7 @@ SkeletonASTVisitor::TraverseCXXMemberCallExpr(CXXMemberCallExpr* expr, DataRecur
     //TraverseStmt(expr->getImplicitObjectArgument());
     //this will visit member expr that also visits implicit this
     TraverseStmt(expr->getCallee());
-    for (int i=0; i < expr->getNumArgs(); ++i){
+    for (auto i=0U; i < expr->getNumArgs(); ++i){
       //once I start parsing args, I have "broken" all connections with previous binops
       activeBinOpIdx_ = IndexResetter;
       Expr* arg = expr->getArg(i);
@@ -900,9 +903,9 @@ SkeletonASTVisitor::deleteNullVariableMember(NamedDecl* nullVarDecl, MemberExpr*
 }
 
 bool
-SkeletonASTVisitor::TraverseMemberExpr(MemberExpr *expr, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseMemberExpr(MemberExpr *expr, DataRecursionQueue* /*  queue */)
 {
-  ValueDecl* member = expr->getMemberDecl();
+  auto member = expr->getMemberDecl();
   if (isNullVariable(member)){
     //the member variable itself is declared null
     if (!memberAccesses_.empty()){
@@ -920,8 +923,8 @@ SkeletonASTVisitor::TraverseMemberExpr(MemberExpr *expr, DataRecursionQueue* que
   }
 
   if (expr->getMemberDecl()->getKind() == Decl::Var){
-    VarDecl* vd = cast<VarDecl>(expr->getMemberDecl());
-    const Decl* md = getOriginalDeclaration(vd);
+    auto vd = cast<VarDecl>(expr->getMemberDecl());
+    auto md = getOriginalDeclaration(vd);
     auto iter = globals_.find(md);
     if (iter != globals_.end()){
       GlobalReplacement& gr = iter->second;
@@ -943,7 +946,7 @@ SkeletonASTVisitor::TraverseMemberExpr(MemberExpr *expr, DataRecursionQueue* que
 }
 
 bool
-SkeletonASTVisitor::TraverseCallExpr(CallExpr* expr, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseCallExpr(CallExpr* expr, DataRecursionQueue* /* queue */)
 {
   //this "breaks" connections for null variable propagation
   activeBinOpIdx_ = IndexResetter;
@@ -952,24 +955,24 @@ SkeletonASTVisitor::TraverseCallExpr(CallExpr* expr, DataRecursionQueue* queue)
     if (pag.skipVisit()) return true;
 
     DeclRefExpr* baseFxn = nullptr;
-    if (opts_.runSkeletonize && !pragmaConfig_.replacePragmas.empty()){
-      Expr* fxn = getUnderlyingExpr(const_cast<Expr*>(expr->getCallee()));
+    if (ASTVisitorCmdLine::runSkeletonize && !pragmaConfig_.replacePragmas.empty()){
+      auto fxn = getUnderlyingExpr(const_cast<Expr*>(expr->getCallee()));
       if (fxn->getStmtClass() == Stmt::DeclRefExprClass){
         //this is a basic function call
         baseFxn = cast<DeclRefExpr>(fxn);
         std::string fxnName = baseFxn->getFoundDecl()->getNameAsString();
         for (auto& pair : pragmaConfig_.replacePragmas){
-          SSTReplacePragma* replPrg = static_cast<SSTReplacePragma*>(pair.second);
+          auto replPrg = static_cast<SSTReplacePragma*>(pair.second);
           if (replPrg->fxn() == fxnName){
             replPrg->run(expr, rewriter_);
             return true;
           }
         }
       }
-    } else if (opts_.runSkeletonize) {
-      Expr* fxn = getUnderlyingExpr(const_cast<Expr*>(expr->getCallee()));
+    } else if (ASTVisitorCmdLine::runSkeletonize) {
+      auto fxn = getUnderlyingExpr(const_cast<Expr*>(expr->getCallee()));
       if (fxn->getStmtClass() == Stmt::DeclRefExprClass){
-        DeclRefExpr* dref = cast<DeclRefExpr>(fxn);
+        auto dref = cast<DeclRefExpr>(fxn);
         std::string fxnName = dref->getFoundDecl()->getNameAsString();
         if (sstmacFxnPrepends_.find(fxnName) != sstmacFxnPrepends_.end()){
           insertBefore(expr->getCallee(), rewriter_, "sstmac_");
@@ -986,7 +989,7 @@ SkeletonASTVisitor::TraverseCallExpr(CallExpr* expr, DataRecursionQueue* queue)
     FunctionDecl* fd = expr->getDirectCallee();
     goIntoContext(expr, [&]{
       TraverseStmt(expr->getCallee());
-      for (int i=0; i < expr->getNumArgs(); ++i){
+      for (auto i=0U; i < expr->getNumArgs(); ++i){
         //va_args really foobars things here...
         //call site can have more args than params in declaration
         if (fd && i < fd->getNumParams()){
@@ -1414,7 +1417,7 @@ SkeletonASTVisitor::addCppGlobalCtorString(PrettyPrinter& pp, CXXConstructExpr* 
       //cast the lambda to an std::function to make partial template specialization work
       addCppGlobalCallExprString(pp, cast<CallExpr>(mainArg), ctor->getType());
     } else {
-      for (int i=0; i < ctor->getNumArgs(); ++i){
+      for (auto i=0U; i < ctor->getNumArgs(); ++i){
         if (i > 0) pp.os << ",";
         Expr* e = getUnderlyingExpr(ctor->getArg(i));
         pp.print(e);
@@ -1893,7 +1896,6 @@ SkeletonASTVisitor::TraverseLambdaExpr(LambdaExpr* expr)
 bool
 SkeletonASTVisitor::doTraverseLambda(LambdaExpr* expr)
 {
-  LambdaCaptureDefault def = expr->getCaptureDefault();
   switch (expr->getCaptureDefault()){
     case LCD_None: {
       EmplaceGuard<std::set<const clang::Decl*>> eg(globalsTouched_);
@@ -2378,20 +2380,8 @@ SkeletonASTVisitor::checkInstanceStaticClassVar(VarDecl *D)
      << "," << getCleanTypeName(D->getType())
      << "," << std::boolalpha << isThreadLocal(D)
      << ">(";
-  bool isCallExpr = addInitializers(D, os, false); //no leading comma
+  addInitializers(D, os, false); //no leading comma
   os << ");";
-
-  /** don't need this anymore
-  std::string init_prefix = parentCls->getNameAsString() + "::";
-  //this has an initial value we need to transfer over
-  //log the variable so we can drop replacement info in the static cxx file
-  //if static and no init given, then we will drop this initialization code at the instantiation point
-  if (D->getType().isVolatileQualified()) os << "volatile ";
-  os << "void* __ptr_" << scope_unique_var_name << " = &"
-     << init_prefix << D->getNameAsString() << "; "
-     << "int __sizeof_" << scope_unique_var_name << " = sizeof("
-     << init_prefix << D->getNameAsString() << ");";
-  */
 
   for (auto iter = semBegin; iter != sem.end(); ++iter){
     os << "}"; //close namespaces
@@ -2404,7 +2394,7 @@ SkeletonASTVisitor::checkInstanceStaticClassVar(VarDecl *D)
 
 bool
 SkeletonASTVisitor::TraverseUnresolvedLookupExpr(clang::UnresolvedLookupExpr* expr,
-                                                 DataRecursionQueue* queue)
+                                                 DataRecursionQueue* /* queue */)
 {
   for (auto iter=expr->decls_begin(); iter != expr->decls_end(); ++iter){
     NamedDecl* nd = *iter;
@@ -2602,7 +2592,7 @@ SkeletonASTVisitor::visitVarDecl(VarDecl* D)
   */
 
   //memoization should do no refactoring of global variables
-  if (opts_.runMemoize)
+  if (ASTVisitorCmdLine::runMemoize)
     return false;
 
   bool skipInit = false;
@@ -2929,7 +2919,7 @@ SkeletonASTVisitor::TraverseCompoundStmt(CompoundStmt* stmt, DataRecursionQueue*
 }
 
 bool
-SkeletonASTVisitor::TraverseFieldDecl(clang::FieldDecl* fd, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseFieldDecl(clang::FieldDecl* fd, DataRecursionQueue* /* queue */)
 {
   try {
     PragmaActivateGuard pag(fd, this);
@@ -3100,7 +3090,7 @@ SkeletonASTVisitor::TraverseCompoundAssignOperator(CompoundAssignOperator *op, D
 }
 
 bool
-SkeletonASTVisitor::TraverseBinaryOperator(BinaryOperator* op, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseBinaryOperator(BinaryOperator* op, DataRecursionQueue* /* queue */)
 {
   try {
 
@@ -3145,7 +3135,7 @@ SkeletonASTVisitor::TraverseBinaryOperator(BinaryOperator* op, DataRecursionQueu
 }
 
 bool
-SkeletonASTVisitor::TraverseIfStmt(IfStmt* stmt, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseIfStmt(IfStmt* stmt, DataRecursionQueue* /* queue */)
 {
   try {
     PragmaActivateGuard pag(stmt, this);
@@ -3168,7 +3158,7 @@ SkeletonASTVisitor::TraverseIfStmt(IfStmt* stmt, DataRecursionQueue* queue)
 }
 
 bool
-SkeletonASTVisitor::TraverseDeclStmt(DeclStmt* stmt, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseDeclStmt(DeclStmt* stmt, DataRecursionQueue* /* queue */)
 {
   try {
 
@@ -3217,7 +3207,7 @@ SkeletonASTVisitor::TraverseDoStmt(DoStmt* S, DataRecursionQueue* queue)
 }
 
 bool
-SkeletonASTVisitor::TraverseWhileStmt(WhileStmt* S, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseWhileStmt(WhileStmt* S, DataRecursionQueue* /* queue */)
 {
   try {
     PragmaActivateGuard pag(S, this);
@@ -3233,7 +3223,7 @@ SkeletonASTVisitor::TraverseWhileStmt(WhileStmt* S, DataRecursionQueue* queue)
 }
 
 bool
-SkeletonASTVisitor::TraverseForStmt(ForStmt *S, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseForStmt(ForStmt *S, DataRecursionQueue* /* queue */)
 {
   try {
     PragmaActivateGuard pag(S, this);
@@ -3253,7 +3243,7 @@ SkeletonASTVisitor::TraverseForStmt(ForStmt *S, DataRecursionQueue* queue)
 }
 
 bool
-SkeletonASTVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr* expr, DataRecursionQueue* queue)
+SkeletonASTVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr* expr, DataRecursionQueue* /* queue */)
 {
   /**
   Expr* base = getUnderlyingExpr(expr->getBase());
@@ -3283,7 +3273,7 @@ SkeletonASTVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr* expr, DataRec
 bool
 SkeletonASTVisitor::VisitStmt(Stmt *S)
 {
-  if (opts_.runSkeletonize){
+  if (ASTVisitorCmdLine::runSkeletonize){
     try {
       PragmaActivateGuard pag(S, this);
     } catch (StmtDeleteException& e) {
@@ -3607,8 +3597,13 @@ FirstPassASTVistor::VisitStmt(Stmt *s)
 }
 
 FirstPassASTVistor::FirstPassASTVistor(CompilerInstance& ci,
-  SSTPragmaList& prgs, clang::Rewriter& rw, PragmaConfig& cfg) :
-  ci_(ci), pragmas_(prgs), rewriter_(rw), pragmaConfig_(cfg)
+  SSTPragmaList& prgs, 
+  clang::Rewriter& rw, 
+  PragmaConfig& cfg) :
+  ci_(ci), 
+  pragmas_(prgs), 
+  pragmaConfig_(cfg),
+  rewriter_(rw)
 {
-  opts_.setup();
+  ASTVisitorCmdLine::setup();
 }

@@ -100,7 +100,7 @@ struct ASTVisitorCmdLine {
 class FirstPassASTVistor : public clang::RecursiveASTVisitor<FirstPassASTVistor>
 {
  public:
-  friend class PragmaActivateGuard;
+  friend struct PragmaActivateGuard;
 
   FirstPassASTVistor(clang::CompilerInstance& ci,
                      SSTPragmaList& prgs, clang::Rewriter& rw,
@@ -118,8 +118,6 @@ class FirstPassASTVistor : public clang::RecursiveASTVisitor<FirstPassASTVistor>
   SSTPragmaList& pragmas_;
   PragmaConfig& pragmaConfig_;
   clang::Rewriter& rewriter_;
-  ASTVisitorCmdLine opts_;
-
 };
 
 /**
@@ -137,16 +135,29 @@ class FirstPassASTVistor : public clang::RecursiveASTVisitor<FirstPassASTVistor>
 class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor> {
   friend class SkeletonASTConsumer;
 
- private:
+  /*
+   * Enums
+   */
+  using BinOpSide = enum { LHS, RHS };
+
+  using GlobalVariable_t = enum {
+    Global, //regular global variable (C-style)
+    FileStatic,
+    CxxStatic, //c++ static class variable
+    FxnStatic
+  };
+
+  /*
+   * Stucts
+   */
   struct AnonRecord {
-    clang::RecordDecl* decl;
-    bool typeNameAdded;
+    clang::RecordDecl* decl = nullptr;
+    bool typeNameAdded = false;
     std::string structType;  //union or struct
     std::string retType;
-    bool isFxnStatic;
+    bool isFxnStatic = false;
     //struct X_anonymous_type - gives unique typename to anonymous truct
     std::string typeName;
-    AnonRecord() : decl(nullptr), isFxnStatic(false), typeNameAdded(false) {}
   };
 
   struct ArrayInfo {
@@ -157,35 +168,160 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
     std::string typedefString;
     std::string typedefName;
     std::string retType;
-    bool isFxnStatic;
-    bool needsDeref;
-
-    ArrayInfo() : isFxnStatic(false), needsDeref(true) {}
+    bool isFxnStatic = false;
+    bool needsDeref = true;
   };
 
-  static constexpr int IndexResetter = -1;
+  struct GlobalStandin {
+    bool fxnStatic = false;
+    bool threadLocal = false;
+    std::string replText;
+  };
+
+  /** These should always index by the canonical decl */
+  struct GlobalReplacement {
+    GlobalReplacement(std::string reusable, std::string oneOff, bool app)
+        : append(app),
+          reusableText(std::move(reusable)),
+          oneOffText(std::move(oneOff)) {}
+
+    bool append;
+
+     //used at beginning of function so that variable can be reused
+    //without redoing all the lookup work
+    std::string reusableText;
+
+    //used in ctors and other contexts when variable must be directly
+    //accessed and cannot be reused
+    std::string oneOffText;
+
+  };
+
+  /**
+   * Exception-safe pushing back on a list
+   * Forces clean up even if exceptions get thrown
+   */
+  template <class T>
+  struct PushGuard {
+    template <class U>
+    PushGuard(std::list<T>& theList, U&& t) : myList(theList) {
+      myList.push_back(t);
+    }
+
+    ~PushGuard(){ myList.pop_back(); }
+
+    void swap(T&& t){
+      myList.pop_back();
+      myList.push_back(t);
+    }
+
+    std::list<T>& myList;
+  };
+
+  template <class T, class U>
+  struct InsertGuard {
+    InsertGuard(std::map<T*,U*>& theMap, T* t, U* u) :
+      myMap(theMap), myKey(t) {
+      myMap.emplace(t,u);
+    }
+
+    ~InsertGuard(){ myMap.erase(myKey); }
+
+    std::map<T*,U*>& myMap;
+    T* myKey;
+  };
+
+  template <class T>
+  struct VectorPushGuard {
+    template <class... Args>
+    explicit VectorPushGuard(std::vector<T>& theVec, Args&& ...args) : myVec(theVec) {
+      myVec.emplace_back(std::forward<Args>(args)...);
+    }
+
+    template <class... Args>
+    void swap(Args&& ...args){
+      myVec.pop_back();
+      myVec.emplace_back(std::forward<Args>(args)...);
+    }
+
+    ~VectorPushGuard(){ myVec.pop_back(); }
+
+    std::vector<T>& myVec;
+  };
+
+  struct IndexGuard {
+    IndexGuard(int& t, int value) {
+      if (t < 0) {
+        t = value;
+        myPtr = &t;
+      } else { //don't overwrite
+        myPtr = nullptr;
+      }
+    }
+
+    ~IndexGuard(){ if (myPtr != nullptr) *myPtr = IndexResetter; }
+
+    int* myPtr;
+  };
+
+  template <class T>
+  struct EmplaceGuard {
+    explicit EmplaceGuard(std::list<T>& theList) : myList(theList) {
+      myList.emplace_back();
+    }
+
+    ~EmplaceGuard(){ myList.pop_back(); }
+
+    std::list<T>& myList;
+  };
+
+  struct IncrementGuard { 
+    explicit IncrementGuard(int& idx) : myIdx(idx)
+    {
+      ++myIdx;
+    }
+    ~IncrementGuard(){ --myIdx; }
+    int& myIdx;
+  };
+
+  struct cArrayConfig {
+    std::string fundamentalTypeString;
+    clang::QualType fundamentalType;
+    std::stringstream arrayIndices;
+  };
+
+  struct ReconstructedType {
+    int typeIndex = 0;
+    std::list<clang::QualType> fundamentalFieldTypes;
+    std::list<const clang::RecordDecl*> classFieldTypes;
+    std::list<const clang::RecordDecl*> newClassFieldTypes;
+    std::list<std::pair<std::string,std::string>> arrayTypes;
+    std::set<const clang::RecordDecl*> structDependencies;
+  };
+
+  /*
+   * End Structs
+   */
 
   static bool indexIsSet(int idx){
     return idx != IndexResetter;
   }
 
+
+
  public:
   SkeletonASTVisitor(clang::Rewriter &R,
                      GlobalVarNamespace& ns,
                      PragmaConfig& cfg) :
-    rewriter_(R), visitingGlobal_(false),
-    globalNs_(ns), currentNs_(&ns),
-    insideCxxMethod_(0), activeBinOpIdx_(-1),
-    foundCMain_(false), keepGlobals_(false),
-    refactorMain_(true),
     pragmaConfig_(cfg),
-    numRelocations_(0),
-    reconstructCount_(0)
+    rewriter_(R), 
+    globalNs_(ns), 
+    currentNs_(&ns)
   {
     initHeaders();
     initReservedNames();
     initMPICalls();
-    opts_.setup();
+    ASTVisitorCmdLine::setup();
     pragmaConfig_.astVisitor = this;
   }
 
@@ -245,7 +381,7 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
   }
 
   bool skeletonize() const {
-    return opts_.runSkeletonize;
+    return ASTVisitorCmdLine::runSkeletonize;
   }
 
   void setCompilerInstance(clang::CompilerInstance& c){
@@ -253,7 +389,7 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
   }
 
   bool memoize() const {
-    return opts_.runMemoize;
+    return ASTVisitorCmdLine::runMemoize;
   }
 
   /**
@@ -532,38 +668,6 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
   clang::CXXConstructExpr* getCtor(clang::VarDecl* vd);
 
  private:
-  //whether we are allowed to use global variables in statements
-  //or if they are disallowed because they would break deglobalizer
-  clang::Decl* currentTopLevelScope_;
-  clang::Rewriter& rewriter_;
-  clang::CompilerInstance* ci_;
-  std::map<clang::RecordDecl*,clang::TypedefDecl*> typedefStructs_;
-  SSTPragmaList pragmas_;
-  bool visitingGlobal_;
-  bool inLiftContext_ = false;
-  std::set<clang::FunctionDecl*> templateDefinitions_;
-  std::list<clang::CXXConstructorDecl*> ctorContexts_;
-  GlobalVarNamespace& globalNs_;
-  GlobalVarNamespace* currentNs_;
-
-  /** These should always index by the canonical decl */
-  struct GlobalReplacement {
-     //used at beginning of function so that variable can be reused
-    //without redoing all the lookup work
-    std::string reusableText;
-    //used in ctors and other contexts when variable must be directly
-    //accessed and cannot be reused
-    std::string oneOffText;
-    bool append;
-    GlobalReplacement(const std::string& reusable,
-                      const std::string& oneOff,
-                      bool app) :
-      append(app), reusableText(reusable), oneOffText(oneOff) {}
-  };
-
-  std::map<const clang::Decl*,GlobalReplacement> globals_;
-  std::set<const clang::Decl*> variableTemplates_;
-  std::map<const clang::Decl*,std::string> scopedNames_;
 
 
   static inline const clang::Decl* mainDecl(const clang::Decl* d){
@@ -574,7 +678,6 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
     return dr->getDecl()->getCanonicalDecl();
   }
 
-  std::string activeGlobalScopedName_;
 
   bool activeGlobal() const {
     return !activeGlobalScopedName_.empty();
@@ -699,166 +802,14 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
   void addRelocation(clang::UnaryOperator* op, clang::DeclRefExpr* dr,
                      clang::ValueDecl* member = nullptr);
 
-  std::set<std::string> globalsDeclared_;
-  bool useAllHeaders_;
-  int insideCxxMethod_;
-
-  std::map<clang::FunctionDecl*, std::map<std::string, int>> staticFxnVarCounts_;
-  std::list<clang::FunctionDecl*> fxnContexts_;
-  std::list<clang::CXXRecordDecl*> classContexts_;
-  std::list<clang::Stmt*> loopContexts_; //both fors and whiles
-  /* a subset of loop contexts, only those loops that are skeletonized */
-  std::list<clang::ForStmt*> computeLoops_;
-  std::list<clang::Stmt*> stmtContexts_;
-  std::list<clang::Decl*> assignments_;
-  std::list<clang::Expr*> activeDerefs_;
-  std::list<clang::IfStmt*> activeIfs_;
-  //most deletions are tracked through exceptions
-  //however, sometimes a call expr must "lookahead" and delete arguments before
-  //they are traversed in the natural course of AST traversal
-  //note here any arguments that are modified/deleted
-  std::set<clang::Expr*> deletedArgs_;
-  std::list<clang::MemberExpr*> memberAccesses_;
-  std::map<clang::Stmt*,clang::Stmt*> extendedReplacements_;
-  std::set<clang::DeclContext*> innerStructTagsDeclared_;
-
-  /**
-   * @brief dependentStaticMembers_
-   * Static variables of template classes that lead to
-   * CXXDependentScopeMemberExpr in which a global variable cannot be recognized
-   * because it is hidden behind template parameters
-   */
-  std::map<std::string,clang::VarDecl*> dependentStaticMembers_;
-
-  std::list<std::list<std::pair<clang::SourceRange,std::string>>> stmtReplacements_;
-
-  std::list<clang::VarDecl*> activeDecls_;
-  std::list<clang::Expr*> activeInits_;
-
-  int numRelocations_;
-
-  typedef enum { LHS, RHS } BinOpSide;
-  std::vector<std::pair<clang::BinaryOperator*,BinOpSide>> binOps_;
-  int activeBinOpIdx_;
-
-  std::list<clang::ParmVarDecl*> activeFxnParams_;
-
-  bool foundCMain_;
-  bool refactorMain_;
-  std::string mainName_;
-  bool keepGlobals_;
-  std::set<std::string> ignoredHeaders_;
-  std::set<std::string> reservedNames_;
-  PragmaConfig& pragmaConfig_;
-  std::set<clang::DeclRefExpr*> alreadyReplaced_;
-  std::set<std::string> globalVarWhitelist_;
-  ASTVisitorCmdLine opts_;
 
   friend class PragmaActivateGuard;
 
-  struct GlobalStandin {
-    bool fxnStatic;
-    bool threadLocal;
-    std::string replText;
-    GlobalStandin() : fxnStatic(false), threadLocal(false) {}
-  };
 
-  std::map<const clang::Decl*,GlobalStandin> globalStandins_;
-  std::list<int> initIndices_;
-  std::list<clang::FieldDecl*> activeFieldDecls_;
-  std::list<std::set<const clang::Decl*>> globalsTouched_;
-  std::set<std::string> sstmacFxnPrepends_;
 
   typedef void (SkeletonASTVisitor::*MPI_Call)(clang::CallExpr* expr);
-  std::map<std::string, MPI_Call> mpiCalls_;
 
  private:
-  /**
-   * Exception-safe pushing back on a list
-   * Forces clean up even if exceptions get thrown
-   */
-  template <class T>
-  struct PushGuard {
-    template <class U>
-    PushGuard(std::list<T>& theList, U&& t) : myList(theList) {
-      myList.push_back(t);
-    }
-
-    ~PushGuard(){ myList.pop_back(); }
-
-    void swap(T&& t){
-      myList.pop_back();
-      myList.push_back(t);
-    }
-
-    std::list<T>& myList;
-  };
-
-  template <class T, class U>
-  struct InsertGuard {
-    InsertGuard(std::map<T*,U*>& theMap, T* t, U* u) :
-      myMap(theMap), myKey(t) {
-      myMap.emplace(t,u);
-    }
-
-    ~InsertGuard(){ myMap.erase(myKey); }
-
-    std::map<T*,U*>& myMap;
-    T* myKey;
-  };
-
-  template <class T>
-  struct VectorPushGuard {
-    template <class... Args>
-    VectorPushGuard(std::vector<T>& theVec, Args&& ...args) : myVec(theVec) {
-      myVec.emplace_back(std::forward<Args>(args)...);
-    }
-
-    template <class... Args>
-    void swap(Args&& ...args){
-      myVec.pop_back();
-      myVec.emplace_back(std::forward<Args>(args)...);
-    }
-
-    ~VectorPushGuard(){ myVec.pop_back(); }
-
-    std::vector<T>& myVec;
-  };
-
-  struct IndexGuard {
-    IndexGuard(int& t, int value) {
-      if (t < 0) {
-        t = value;
-        myPtr = &t;
-      } else { //don't overwrite
-        myPtr = nullptr;
-      }
-    }
-
-    ~IndexGuard(){ if (myPtr) *myPtr = IndexResetter; }
-
-    int* myPtr;
-  };
-
-  template <class T>
-  struct EmplaceGuard {
-    EmplaceGuard(std::list<T>& theList) : myList(theList) {
-      myList.emplace_back();
-    }
-
-    ~EmplaceGuard(){ myList.pop_back(); }
-
-    std::list<T>& myList;
-  };
-
-  struct IncrementGuard {
-    IncrementGuard(int& idx) : myIdx(idx)
-    {
-      ++myIdx;
-    }
-    ~IncrementGuard(){ --myIdx; }
-    int& myIdx;
-  };
 
   template <class Lambda>
   void goIntoContext(clang::Stmt* stmt, Lambda&& l){
@@ -943,12 +894,6 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
     return !fxnContexts_.empty();
   }
 
-  typedef enum {
-    Global, //regular global variable (C-style)
-    FileStatic,
-    CxxStatic, //c++ static class variable
-    FxnStatic
-  } GlobalVariable_t;
 
   /**
    * @brief replaceGlobalVar
@@ -1010,11 +955,6 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
    */
   void declareSSTExternVars(clang::SourceLocation insertLoc);
 
-  struct cArrayConfig {
-    std::string fundamentalTypeString;
-    clang::QualType fundamentalType;
-    std::stringstream arrayIndices;
-  };
 
   void traverseFunctionBody(clang::Stmt* s);
 
@@ -1024,18 +964,7 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
 
   void setFundamentalTypes(clang::QualType qt, cArrayConfig& cfg);
 
-  struct ReconstructedType {
-    int typeIndex;
-    std::list<clang::QualType> fundamentalFieldTypes;
-    std::list<const clang::RecordDecl*> classFieldTypes;
-    std::list<const clang::RecordDecl*> newClassFieldTypes;
-    std::list<std::pair<std::string,std::string>> arrayTypes;
-    std::set<const clang::RecordDecl*> structDependencies;
-  };
 
-  std::unordered_set<std::string> validHeaders_;
-
-  int reconstructCount_;
 
   void reconstructType(clang::SourceLocation typeDeclCutoff,
                       clang::QualType qt, ReconstructedType& rt,
@@ -1066,7 +995,6 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
   void arrayFxnPointerTypedef(clang::VarDecl* D, SkeletonASTVisitor::ArrayInfo* info,
                               std::stringstream& sstr);
 
-
   /**
    * @brief getOriginalDeclaration
    * Fight through all the templates and find the fundamental underlying declaration
@@ -1074,6 +1002,86 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
    * @return
    */
   const clang::Decl* getOriginalDeclaration(clang::VarDecl* vd);
+
+
+  /*
+   * Members 
+   */
+ private:
+  std::set<std::string> globalsDeclared_;
+  std::unordered_set<std::string> validHeaders_;
+  std::map<clang::FunctionDecl*, std::map<std::string, int>> staticFxnVarCounts_;
+  std::list<clang::FunctionDecl*> fxnContexts_;
+  std::list<clang::CXXRecordDecl*> classContexts_;
+  std::list<clang::Stmt*> loopContexts_; //both fors and whiles
+
+  /* a subset of loop contexts, only those loops that are skeletonized */
+  std::list<clang::ForStmt*> computeLoops_;
+  std::list<clang::Stmt*> stmtContexts_; 
+  std::list<clang::Decl*> assignments_;
+  std::list<clang::Expr*> activeDerefs_;
+  std::list<clang::IfStmt*> activeIfs_;
+
+  //most deletions are tracked through exceptions
+  //however, sometimes a call expr must "lookahead" and delete arguments before
+  //they are traversed in the natural course of AST traversal
+  //note here any arguments that are modified/deleted
+  std::set<clang::Expr*> deletedArgs_;
+  std::list<clang::MemberExpr*> memberAccesses_;
+  std::map<clang::Stmt*,clang::Stmt*> extendedReplacements_;
+  std::set<clang::DeclContext*> innerStructTagsDeclared_;
+
+  /**
+   * @brief dependentStaticMembers_
+   * Static variables of template classes that lead to
+   * CXXDependentScopeMemberExpr in which a global variable cannot be recognized
+   * because it is hidden behind template parameters
+   */
+  std::map<std::string,clang::VarDecl*> dependentStaticMembers_;
+  std::list<std::list<std::pair<clang::SourceRange,std::string>>> stmtReplacements_;
+  std::list<clang::VarDecl*> activeDecls_;
+  std::list<clang::Expr*> activeInits_;
+  std::vector<std::pair<clang::BinaryOperator*,BinOpSide>> binOps_;
+  std::list<clang::ParmVarDecl*> activeFxnParams_;
+  std::string mainName_;
+  std::set<std::string> ignoredHeaders_;
+  std::set<std::string> reservedNames_;
+  PragmaConfig& pragmaConfig_;
+  std::set<clang::DeclRefExpr*> alreadyReplaced_;
+  std::set<std::string> globalVarWhitelist_;
+  
+  //whether we are allowed to use global variables in statements
+  //or if they are disallowed because they would break deglobalizer
+  clang::Decl* currentTopLevelScope_;
+  clang::Rewriter& rewriter_;
+  clang::CompilerInstance* ci_;
+  std::map<clang::RecordDecl*,clang::TypedefDecl*> typedefStructs_;
+  SSTPragmaList pragmas_;
+  std::set<clang::FunctionDecl*> templateDefinitions_;
+  std::list<clang::CXXConstructorDecl*> ctorContexts_;
+  GlobalVarNamespace& globalNs_;
+  std::string activeGlobalScopedName_;
+  std::map<const clang::Decl*,GlobalReplacement> globals_;
+  std::set<const clang::Decl*> variableTemplates_;
+  std::map<const clang::Decl*,std::string> scopedNames_;
+  std::map<const clang::Decl*,GlobalStandin> globalStandins_;
+  std::list<int> initIndices_;
+  std::list<clang::FieldDecl*> activeFieldDecls_;
+  std::list<std::set<const clang::Decl*>> globalsTouched_;
+  std::set<std::string> sstmacFxnPrepends_;
+  std::map<std::string, MPI_Call> mpiCalls_;
+
+  bool visitingGlobal_ = false;
+  bool inLiftContext_ = false;
+  bool keepGlobals_ = false;
+  bool foundCMain_ = false;
+  bool refactorMain_ = true;
+  int activeBinOpIdx_ = -1;
+  int numRelocations_ = 0;
+  int insideCxxMethod_ = 0;
+  int reconstructCount_ = 0;
+  GlobalVarNamespace* currentNs_ = nullptr;
+  static constexpr int IndexResetter = -1;
 };
 
 struct PragmaActivateGuard {
@@ -1081,7 +1089,7 @@ struct PragmaActivateGuard {
   PragmaActivateGuard(T* t, SkeletonASTVisitor* visitor, bool doVisit = true) :
     PragmaActivateGuard(t, *visitor->ci_, visitor->pragmaConfig_, visitor->rewriter_,
       visitor->pragmas_, doVisit, false/*2nd pass*/,
-      visitor->opts_.runSkeletonize, visitor->opts_.runMemoize)
+      ASTVisitorCmdLine::runSkeletonize, ASTVisitorCmdLine::runMemoize)
   {
   }
 
@@ -1089,7 +1097,7 @@ struct PragmaActivateGuard {
   PragmaActivateGuard(T* t, FirstPassASTVistor* visitor, bool doVisit = true) :
     PragmaActivateGuard(t, visitor->ci_, visitor->pragmaConfig_, visitor->rewriter_,
       visitor->pragmas_, doVisit, true/*1st pass*/,
-      visitor->opts_.runSkeletonize, visitor->opts_.runMemoize)
+      ASTVisitorCmdLine::runSkeletonize, ASTVisitorCmdLine::runMemoize)
   {
   }
 
