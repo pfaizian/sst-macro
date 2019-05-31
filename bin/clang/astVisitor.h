@@ -327,6 +327,8 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
     pragmaConfig_.astVisitor = this;
   }
 
+  SkeletonASTVisitor(SkeletonASTVisitor const&) = delete;
+
   /**
    * @brief getUnderlyingExpr Follow through parentheses and casts
    *  to the "significant" expression underneath

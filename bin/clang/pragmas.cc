@@ -510,7 +510,7 @@ SSTReturnPragma::activate(Decl* d, Rewriter& r, PragmaConfig&  /* cfg */)
 void
 SSTLiftPragma::activate(Stmt *s, Rewriter & /* r */, PragmaConfig &cfg)
 {
-  auto vis = *cfg.astVisitor;
+  auto &vis = *cfg.astVisitor;
   lc_ = vis.addLiftingContext(s);
 }
 
@@ -518,7 +518,7 @@ SSTLiftPragma::activate(Stmt *s, Rewriter & /* r */, PragmaConfig &cfg)
 void
 SSTLiftPragma::activate(Decl* d, Rewriter&  /* r */, PragmaConfig&   cfg)
 {
-  auto vis = *cfg.astVisitor;
+  auto &vis = *cfg.astVisitor;
   
   std::cout << "WAT\n";
   // cfg.astVisitor->setLiftContext(true);
