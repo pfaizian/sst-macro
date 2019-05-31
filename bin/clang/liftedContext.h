@@ -61,6 +61,8 @@ class LiftingContext {
 
   struct ValueMetaData {
     bool mutated = true; // Be pesimistic
+    clang::QualType input_type;
+    clang::QualType lifted_type;
   };
 
   std::ostream& write_lifted_function(std::ostream &) const;
