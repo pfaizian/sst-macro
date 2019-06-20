@@ -71,10 +71,9 @@ struct PragmaConfig {
 
   int pragmaDepth = 0;
   bool makeNoChanges = false;
-  SSTNullVariableGeneratorPragma* nullifyDeclarationsPragma = nullptr;
   SkeletonASTVisitor* astVisitor = nullptr;
-
-  PragmaConfig() = default;
+  SSTNullVariableGeneratorPragma* nullifyDeclarationsPragma = nullptr;
+  PragmaConfig() = default; 
 };
 
 struct SSTPragmaList;
