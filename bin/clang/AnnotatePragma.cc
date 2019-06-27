@@ -43,20 +43,44 @@ Questions? Contact sst-macro-help@sandia.gov
 */
 
 #include "AnnotatePragma.h"
+#include "astVisitor.h"
+#include <clang/AST/Stmt.h>
 
 SSTAnnotatePragma::SSTAnnotatePragma() : SSTPragma(Annotate) {}
 
 void SSTAnnotatePragma::activate(clang::Stmt *S, clang::Rewriter &R,
                                  PragmaConfig &Cfg) {
-  llvm::errs() << "Statement\n\n";
-  S->dumpColor();
-  llvm::errs() << "\n\n";
+  
+  auto &Sm = Cfg.astVisitor->getCompilerInstance().getSourceManager();
+  auto Begin = Sm.getPresumedLineNumber(S->getBeginLoc());
+  auto End = Sm.getPresumedLineNumber(S->getEndLoc());
+
+  llvm::errs() << "Stmt range: " << Begin << ":" << End << "\n";
+
+  auto BeginE = Sm.getExpansionLineNumber(S->getBeginLoc());
+  auto EndE = Sm.getExpansionLineNumber(S->getEndLoc());
+
+  llvm::errs() << "Stmt Expansion range: " << BeginE << ":" << EndE << "\n";
+
+  auto &Ctx = Cfg.astVisitor->getCompilerInstance().getASTContext();
+  for(auto const& Node : Ctx.getParents(*S)){
+    auto StmtParent = Node.get<clang::Stmt>();
+    if(!StmtParent){
+      continue;
+    }
+
+    StmtParent->dumpColor();
+    
+  }
 }
+
 void SSTAnnotatePragma::activate(clang::Decl *D, clang::Rewriter &R,
                                  PragmaConfig &Cfg) {
-  llvm::errs() << "Decl\n\n";
-  D->dumpColor();
-  llvm::errs() << "\n\n";
+  auto &Sm = Cfg.astVisitor->getCompilerInstance().getSourceManager();
+  auto Begin = Sm.getPresumedLineNumber(D->getBeginLoc());
+  auto End = Sm.getPresumedLineNumber(D->getEndLoc());
+
+  llvm::errs() << "Decl range: " << Begin << ":" << End << "\n";
 }
 void SSTAnnotatePragma::deactivate(PragmaConfig &Cfg) {}
 
