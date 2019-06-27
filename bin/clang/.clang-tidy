@@ -8,8 +8,6 @@ CheckOptions:
     value:           camelBack
   - key:             readability-identifier-naming.MemberCase
     value:           CamelCase
-  - key:             readability-identifier-naming.MemberSuffix
-    value:           _
   - key:             readability-identifier-naming.ParameterCase
     value:           CamelCase
   - key:             readability-identifier-naming.UnionCase
