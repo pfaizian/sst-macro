@@ -158,7 +158,7 @@ static void tokenToString(const Token& tok, std::ostream& os,
 void
 SSTPragmaHandler::configure(Token& /*PragmaTok*/, Preprocessor& PP, SSTPragma* fsp)
 {
-  switch(fsp->cls){
+  switch(fsp->Kind){
     case SSTPragma::ImplicitState:
     case SSTPragma::Memoize:
     case SSTPragma::AlwaysCompute:
@@ -825,7 +825,7 @@ SSTNullFieldsPragma::SSTNullFieldsPragma(CompilerInstance &CI, const std::list<T
     nullFields_.insert(str);
   }
   extras_.clear();
-  this->cls = NullFields;
+  this->Kind = NullFields;
 }
 
 void
@@ -844,7 +844,7 @@ SSTNullFieldsPragma::activate(Stmt *stmt, Rewriter &/* r */, PragmaConfig & /* c
 SSTNonnullFieldsPragma::SSTNonnullFieldsPragma(CompilerInstance &CI, const std::list<Token> &tokens) :
   SSTNullVariablePragma(CI, tokens)
 {
-  this->cls = NonnullFields;
+  this->Kind = NonnullFields;
   for (auto& str : extras_){
     nonnullFields_.insert(str);
   }

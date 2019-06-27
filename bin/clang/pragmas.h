@@ -77,7 +77,7 @@ struct PragmaConfig {
 
 struct SSTPragmaList;
 struct SSTPragma {
-  using class_t = enum {
+  using PragmaKind = enum {
     Replace=0,
     Delete=1,
     Compute=2,
@@ -114,7 +114,7 @@ struct SSTPragma {
   clang::CompilerInstance* CI;
   SkeletonASTVisitor* visitor;
   SSTPragmaList* pragmaList;
-  class_t cls;
+  PragmaKind Kind;
   int depth;
 
   void print(){
@@ -148,7 +148,7 @@ struct SSTPragma {
     return false;
   }
 
-  explicit SSTPragma(class_t _cls) : cls(_cls){}
+  explicit SSTPragma(PragmaKind _Kind) : Kind(_Kind){}
 
   virtual void activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg) = 0;
   virtual void activate(clang::Decl* /* d */, clang::Rewriter& /* r */, PragmaConfig &/* cfg */){} //not required
@@ -289,7 +289,7 @@ class SSTNullVariablePragma : public SSTPragma {
     cln->skelComputes_ = skelComputes_;
   }
 
-  explicit SSTNullVariablePragma(SSTPragma::class_t cls) : SSTPragma(cls){}
+  explicit SSTNullVariablePragma(SSTPragma::PragmaKind Kind) : SSTPragma(Kind){}
 
   void doActivate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg);
 

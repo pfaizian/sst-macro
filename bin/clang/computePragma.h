@@ -72,7 +72,7 @@ class SSTComputePragma : public SSTPragma {
   std::string nthread_;
 
  protected:
-  SSTComputePragma(SSTPragma::class_t cls) : SSTPragma(cls) {}
+  SSTComputePragma(SSTPragma::PragmaKind cls) : SSTPragma(cls) {}
 };
 
 class SSTAlwaysComputePragma : public SSTComputePragma

@@ -422,7 +422,7 @@ ComputeVisitor::checkStmtPragmas(Stmt* s)
   auto matches = pragmas.getMatches(s);
   if (!matches.empty()){
     SSTPragma* prg = matches.front();
-    switch (prg->cls){
+    switch (prg->Kind){
     case SSTPragma::Replace: {
       SSTReplacePragma* rprg = static_cast<SSTReplacePragma*>(prg);
       std::list<const Expr*> replaced;
@@ -471,7 +471,7 @@ ComputeVisitor::visitBodyIfStmt(IfStmt *stmt, Loop::Body &body)
   }
 
   SSTPragma* prg = matches.front();
-  if (prg->cls == SSTPragma::BranchPredict){
+  if (prg->Kind == SSTPragma::BranchPredict){
     SSTBranchPredictPragma* bprg = static_cast<SSTBranchPredictPragma*>(prg);
     if (bprg->prediction() == "true"){
       addOperations(stmt->getThen(), body);
@@ -522,7 +522,7 @@ ComputeVisitor::visitBodyDeclStmt(DeclStmt* stmt, Loop::Body& body)
     auto matches = pragmas.getMatches(stmt);
     if (!matches.empty()){
      SSTPragma* prg = matches.front();
-      if (prg->cls == SSTPragma::Replace){
+      if (prg->Kind == SSTPragma::Replace){
         SSTReplacePragma* rprg = static_cast<SSTReplacePragma*>(prg);
         repls.decls[d] = rprg->replacement();
       }

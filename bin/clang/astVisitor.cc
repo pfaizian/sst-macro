@@ -3328,7 +3328,7 @@ PragmaActivateGuard::init()
 
     //a compute pragma totally deletes the block
     bool blockDeleted = false;
-    switch (prg->cls){
+    switch (prg->Kind){
       case SSTPragma::StackAlloc:
       case SSTPragma::ImplicitState:
       case SSTPragma::Memoize:  //always - regardless of skeletonization
