@@ -168,7 +168,6 @@ ReplaceAction::initPragmas(CompilerInstance& CI)
   add_handler<SSTLoopCountPragmaHandler>(CI,PP,visitor_);
   add_handler<SSTInitPragmaHandler>(CI,PP,visitor_);
   add_handler<SSTReturnPragmaHandler>(CI,PP,visitor_);
-  add_handler<SSTLiftPragmaHandler>(CI,PP,visitor_);
   add_handler<SSTGlobalVariablePragmaHandler>(CI,PP,visitor_);
   add_handler<SSTNullTypePragmaHandler>(CI,PP,visitor_);
   add_handler<SSTEmptyPragmaHandler>(CI,PP,visitor_);

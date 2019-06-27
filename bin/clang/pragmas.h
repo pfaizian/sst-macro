@@ -48,7 +48,6 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include "clangHeaders.h"
 #include "util.h"
-#include "clang/liftedContext.h"
 #include <set>
 
 class SkeletonASTVisitor;
@@ -105,7 +104,6 @@ struct SSTPragma {
     Memoize=23,
     StackAlloc=24,
     ImplicitState=25,
-    Lift=26
   };
 
   clang::StringRef name;
@@ -184,18 +182,6 @@ class SSTReturnPragma : public SSTPragma {
   void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg) override;
 
   std::string repl_;
-};
-
-class SSTLiftPragma : public SSTPragma {
- public:
-  explicit SSTLiftPragma() : SSTPragma(Lift) {}
-
- private:
-  void activate(clang::Stmt* s, clang::Rewriter& r, PragmaConfig& cfg) override;
-  void activate(clang::Decl* d, clang::Rewriter& r, PragmaConfig& cfg) override;
-  void deactivate(PragmaConfig& cfg) override;
-
-  LiftingContext *lc_ = nullptr;
 };
 
 class SSTGlobalVariablePragma : public SSTPragma {
@@ -814,19 +800,6 @@ class SSTReturnPragmaHandler : public SSTPragmaHandler
                         clang::CompilerInstance& CI,
                         SkeletonASTVisitor& visitor) :
      SSTPragmaHandler("return", plist, CI, visitor){}
-
- private:
-  SSTPragma* handleSSTPragma(const std::list<clang::Token> &tokens) const override;
-
-};
-
-class SSTLiftPragmaHandler : public SSTPragmaHandler
-{
- public:
-  SSTLiftPragmaHandler(SSTPragmaList& plist,
-                        clang::CompilerInstance& CI,
-                        SkeletonASTVisitor& visitor) :
-     SSTPragmaHandler("lift", plist, CI, visitor){}
 
  private:
   SSTPragma* handleSSTPragma(const std::list<clang::Token> &tokens) const override;

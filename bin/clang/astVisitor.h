@@ -48,7 +48,6 @@ Questions? Contact sst-macro-help@sandia.gov
 #include "clangHeaders.h"
 #include "pragmas.h"
 #include "globalVarNamespace.h"
-#include "liftedContext.h"
 #include "clang/AST/Stmt.h"
 
 #include <unordered_set>
@@ -359,10 +358,6 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
     return ci_->getLangOpts().CPlusPlus;
   }
 
-  LiftingContext *addLiftingContext(clang::Stmt const*s){
-    liftContexts_.emplace_back(s, ci_->getASTContext());
-    return &liftContexts_.back();
-  };
 
   std::string needGlobalReplacement(clang::NamedDecl* decl) {
     const clang::Decl* md = mainDecl(decl);
@@ -1066,7 +1061,6 @@ class SkeletonASTVisitor : public clang::RecursiveASTVisitor<SkeletonASTVisitor>
   std::set<std::string> sstmacFxnPrepends_;
   std::map<std::string, MPI_Call> mpiCalls_;
 
-  std::list<LiftingContext> liftContexts_;
 
   bool visitingGlobal_ = false;
   bool keepGlobals_ = false;

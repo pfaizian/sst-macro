@@ -44,7 +44,6 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include "pragmas.h"
 #include "astVisitor.h"
-#include "liftedContext.h"
 #include <sstream>
 
 using namespace clang;
@@ -167,7 +166,6 @@ SSTPragmaHandler::configure(Token& /*PragmaTok*/, Preprocessor& PP, SSTPragma* f
     case SSTPragma::AdvanceTime:
     case SSTPragma::Overhead:
     case SSTPragma::StackAlloc:
-    case SSTPragma::Lift:
     case SSTPragma::Keep: //always obey these
       pragmas_.push_back(fsp);
       break;
@@ -505,30 +503,6 @@ SSTReturnPragma::activate(Decl* d, Rewriter& r, PragmaConfig&  /* cfg */)
   }
   std::string repl = "{ return " + repl_ + "; }";
   replace(fd->getBody(), r, repl, *CI);
-}
-
-void
-SSTLiftPragma::activate(Stmt *s, Rewriter & /* r */, PragmaConfig &cfg)
-{
-  auto &vis = *cfg.astVisitor;
-  lc_ = vis.addLiftingContext(s);
-}
-
-
-void
-SSTLiftPragma::activate(Decl* d, Rewriter&  /* r */, PragmaConfig&   cfg)
-{
-  auto &vis = *cfg.astVisitor;
-  
-  std::cout << "WAT\n";
-  // cfg.astVisitor->setLiftContext(true);
-}
-
-void
-SSTLiftPragma::deactivate(PragmaConfig &cfg)
-{ 
-  // This is where we will write our replacement
-  lc_->write_lifted_function(std::cout);
 }
 
 void
@@ -968,14 +942,6 @@ SSTReturnPragmaHandler::handleSSTPragma(const std::list<Token> &tokens) const
   std::stringstream sstr;
   SSTPragma::tokenStreamToString(tokens.begin(), tokens.end(), sstr, ci_);
   return new SSTReturnPragma(ci_, sstr.str());
-}
-
-SSTPragma*
-SSTLiftPragmaHandler::handleSSTPragma(const std::list<Token> &tokens) const
-{
-  std::stringstream sstr;
-  SSTPragma::tokenStreamToString(tokens.begin(), tokens.end(), sstr, ci_);
-  return new SSTLiftPragma();
 }
 
 SSTPragma*
