@@ -104,6 +104,7 @@ struct SSTPragma {
     Memoize=23,
     StackAlloc=24,
     ImplicitState=25,
+    Annotate=26,
   };
 
   clang::StringRef name;

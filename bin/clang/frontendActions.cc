@@ -45,6 +45,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include "frontendActions.h"
 #include "globalVarNamespace.h"
 #include "pragmas.h"
+#include "AnnotatePragma.h"
 #include "replacePragma.h"
 #include "computePragma.h"
 #include <sstream>
@@ -184,6 +185,7 @@ ReplaceAction::initPragmas(CompilerInstance& CI)
   add_handler<SSTNullVariableStopPragmaHandler>(CI,PP,visitor_);
   add_handler<SSTMemoizeComputePragmaHandler>(CI,PP,visitor_);
   add_handler<SSTStackAllocPragmaHandler>(CI,PP,visitor_);
+  add_handler<SSTAnnotatePragmaHandler>(CI,PP,visitor_);
   add_handler<SSTImplicitStatePragmaHandler>(CI,PP,visitor_);
 }
 

@@ -82,6 +82,7 @@ sstmac_clang_SOURCES = \
   clang/util.cc \
   clang/main.cc \
   clang/pragmas.cc \
+  clang/AnnotatePragma.cc \
   clang/computePragma.cc \
   clang/computeVisitor.cc \
   clang/replacePragma.cc \
