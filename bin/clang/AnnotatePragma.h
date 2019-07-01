@@ -50,10 +50,13 @@ Questions? Contact sst-macro-help@sandia.gov
 
 class SSTAnnotatePragma : public SSTPragma {
 public:
-  SSTAnnotatePragma();
+  SSTAnnotatePragma(std::string AnnType, llvm::SmallVector<std::string, 2> Args);
   void activate(clang::Stmt *S, clang::Rewriter &R, PragmaConfig &Cfg) override;
   void activate(clang::Decl *D, clang::Rewriter &R, PragmaConfig &Cfg) override;
   void deactivate(PragmaConfig &Cfg) override;
+private:
+  std::string AnnType; /// Type of Annotation
+  llvm::SmallVector<std::string, 2> AnnArgs; /// Arguments for Annotation
 };
 
 class SSTAnnotatePragmaHandler : public SSTPragmaHandler {

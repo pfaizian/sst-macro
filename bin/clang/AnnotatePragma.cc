@@ -46,32 +46,59 @@ Questions? Contact sst-macro-help@sandia.gov
 #include "astVisitor.h"
 #include <clang/AST/Stmt.h>
 
-SSTAnnotatePragma::SSTAnnotatePragma() : SSTPragma(Annotate) {}
+SSTAnnotatePragma::SSTAnnotatePragma(std::string AnnType,
+                                     llvm::SmallVector<std::string, 2> Args)
+    : SSTPragma(Annotate), AnnType(std::move(AnnType)),
+      AnnArgs(std::move(Args)) {}
+
+namespace {
+clang::FunctionDecl const *getParentFunctionDecl(clang::Stmt const *S,
+                                                 clang::ASTContext &Ctx) {
+  for (auto const &P : Ctx.getParents(*S)) {
+    if (auto const *FD = P.get<clang::FunctionDecl>()) {
+      return FD;
+    } else if (auto const *ST = P.get<clang::Stmt>()) {
+      return getParentFunctionDecl(ST, Ctx);
+    }
+  }
+
+  return nullptr;
+}
+
+// If this is inefficient switch to sstream @JJ
+std::string writeAnnotation(std::string const& Type, unsigned Start, unsigned End){
+  std::string Annotation = "__attribute__((annotate(\"" + Type + ":";
+  for (auto I = Start; I <= End; ++I) {
+    if(I != Start) {
+      Annotation += ",";
+    }
+    Annotation += std::to_string(I);
+  }
+  Annotation += "\"))) ";
+  return Annotation;
+}
+} // namespace
 
 void SSTAnnotatePragma::activate(clang::Stmt *S, clang::Rewriter &R,
                                  PragmaConfig &Cfg) {
-  
+  // Get the start and end source locations for this statement
   auto &Sm = Cfg.astVisitor->getCompilerInstance().getSourceManager();
   auto Begin = Sm.getPresumedLineNumber(S->getBeginLoc());
   auto End = Sm.getPresumedLineNumber(S->getEndLoc());
 
-  llvm::errs() << "Stmt range: " << Begin << ":" << End << "\n";
-
-  auto BeginE = Sm.getExpansionLineNumber(S->getBeginLoc());
-  auto EndE = Sm.getExpansionLineNumber(S->getEndLoc());
-
-  llvm::errs() << "Stmt Expansion range: " << BeginE << ":" << EndE << "\n";
-
+  // Find the parent function of this statement
   auto &Ctx = Cfg.astVisitor->getCompilerInstance().getASTContext();
-  for(auto const& Node : Ctx.getParents(*S)){
-    auto StmtParent = Node.get<clang::Stmt>();
-    if(!StmtParent){
-      continue;
-    }
-
-    StmtParent->dumpColor();
-    
+  auto ParentFunc = getParentFunctionDecl(S, Ctx);
+  if (ParentFunc == nullptr) {
+    errorAbort(S->getBeginLoc(), Cfg.astVisitor->getCompilerInstance(),
+               "Couldn't find a parent function for the statement");
   }
+  auto FuncLoc = ParentFunc->getBeginLoc();
+
+  // TODO eventually we will need to decide what to do with the arguments
+
+  // Write the annotation on the function 
+  R.InsertTextBefore(FuncLoc, writeAnnotation(AnnType, Begin, End));
 }
 
 void SSTAnnotatePragma::activate(clang::Decl *D, clang::Rewriter &R,
@@ -91,5 +118,14 @@ SSTAnnotatePragmaHandler::SSTAnnotatePragmaHandler(SSTPragmaList &Plist,
 
 SSTPragma *SSTAnnotatePragmaHandler::handleSSTPragma(
     std::list<clang::Token> const &Tokens) const {
-  return new SSTAnnotatePragma();
+  auto Begin = Tokens.begin();
+  std::string AnnotationType = tokenToString(*Begin, ci_);
+
+  llvm::SmallVector<std::string, 2> Args(Tokens.size() - 1);
+  std::transform(++Begin, Tokens.end(), Args.begin(),
+                 [&Ci = this->ci_](clang::Token const &T) {
+                   return tokenToString(T, Ci);
+                 });
+
+  return new SSTAnnotatePragma(std::move(AnnotationType), std::move(Args));
 }
