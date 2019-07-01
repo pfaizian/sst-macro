@@ -162,9 +162,11 @@ struct SSTPragma {
 
 };
 
-std::string getLiteralDataAsString(const clang::Token& tok);
+std::string tokenToString(const clang::Token& Tok, clang::CompilerInstance& Ci);
 
-void getLiteralDataAsString(const clang::Token &tok, std::ostream& os);
+std::string getLiteralDataAsString(const clang::Token& Tok);
+
+void appendLiteralDataToOstream(const clang::Token &Tok, std::ostream& Os);
 
 class SSTReturnPragma : public SSTPragma {
  public:

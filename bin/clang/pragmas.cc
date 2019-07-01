@@ -56,7 +56,7 @@ static int maxPragmaDepth = 0;
 
 SourceLocation SSTPragmaHandler::pragmaDirectiveLoc;
 
-void getLiteralDataAsString(const Token &tok, std::ostream &os)
+void appendLiteralDataToOstream(const Token &tok, std::ostream &os)
 {
   const char* data = tok.getLiteralData(); //not null-terminated, direct from buffer
   for (auto i=0U; i < tok.getLength(); ++i){
@@ -65,94 +65,76 @@ void getLiteralDataAsString(const Token &tok, std::ostream &os)
   }
 }
 
-std::string getLiteralDataAsString(const Token &tok)
+std::string getLiteralDataAsString(const Token &Tok)
 {
   std::stringstream sstr;
-  getLiteralDataAsString(tok, sstr);
+  appendLiteralDataToOstream(Tok, sstr);
   return sstr.str();
 }
 
-static void tokenToString(const Token& tok, std::ostream& os,
-                          clang::CompilerInstance& CI)
+std::string tokenToString(const Token& Tok, clang::CompilerInstance& Ci)
 {
-  switch(tok.getKind()){
+  switch(Tok.getKind()){
   case tok::identifier:
-    os << tok.getIdentifierInfo()->getNameStart();
-    break;
+    return Tok.getIdentifierInfo()->getNameStart();
   case tok::semi:
-    os << ";";
-    break;
+    return ";";
   case tok::l_paren:
-    os << '(';
-    break;
+    return "(";
   case tok::r_paren:
-    os << ')';
-    break;
+    return ")";
   case tok::comma:
-    os << ',';
-    break;
+    return ",";
   case tok::less:
-    os << "<";
-    break;
+    return "<";
   case tok::slash:
-    os << "/";
-    break;
+    return "/";
   case tok::star:
-    os << "*";
-    break;
+    return "*";
   case tok::period:
-    os << ".";
-    break;
+    return ".";
   case tok::kw_return:
-    os << "return ";
-    break;
+    return "return ";
   case tok::coloncolon:
-    os << "::";
-    break;
+    return "::";
   case tok::kw_long:
-    os << "long";
-    break;
+    return "long";
   case tok::kw_int:
-    os << "int";
-    break;
+    return "int";
   case tok::kw_double:
-    os << "double";
-    break;
+    return "double";
   case tok::equalequal:
-    os << "==";
-    break;
+    return "==";
   case tok::kw_sizeof:
-    os << "sizeof";
-    break;
+    return "sizeof";
   case tok::minus:
-    os << "-";
-    break;
+    return "-";
   case tok::percent:
-    os << "%";
-    break;
+    return "%";
   case tok::kw_true:
-    os << "true";
-    break;
+    return "true";
   case tok::kw_false:
-    os << "false";
-    break;
+    return "false";
   case tok::arrow:
-    os << "->";
-    break;
+    return "->";
   case tok::kw_nullptr:
-    os << "nullptr";
-    break;
+    return "nullptr";
   case tok::string_literal:
   case tok::numeric_constant:
   {
-    getLiteralDataAsString(tok, os);
-    break;
+    return getLiteralDataAsString(Tok);
   }
   default:
-    std::cerr << "bad token: " << tok.getName() << std::endl;
-    errorAbort(tok.getLocation(), CI, "invalid token in pragma");
-    break;
+    std::cerr << "bad Token: " << Tok.getName() << std::endl;
+    errorAbort(Tok.getLocation(), Ci, "invalid Token in pragma");
+    return "";
   }
+}
+
+static void tokenAppendToOstream(const Token& tok, std::ostream& os,
+                          clang::CompilerInstance& CI)
+{
+  os << tokenToString(tok, CI);
 }
 
 void
@@ -239,7 +221,7 @@ SSTStringMapPragmaHandler::handleSSTPragma(const std::list<clang::Token>& tokens
         argName = sstr.str();
         sstr.str("");
       } else {
-        tokenToString(t, sstr, ci_);
+        tokenAppendToOstream(t, sstr, ci_);
       }
       ++parenDepth;
       break;
@@ -251,7 +233,7 @@ SSTStringMapPragmaHandler::handleSSTPragma(const std::list<clang::Token>& tokens
         allArgs[argName] = std::move(argList);
         argList = std::list<std::string>{};
       } else {
-        tokenToString(t, sstr, ci_);
+        tokenAppendToOstream(t, sstr, ci_);
       }
       --parenDepth;
       break;
@@ -260,11 +242,11 @@ SSTStringMapPragmaHandler::handleSSTPragma(const std::list<clang::Token>& tokens
         argList.push_back(sstr.str());
         sstr.str("");
       } else {
-        tokenToString(t, sstr, ci_);
+        tokenAppendToOstream(t, sstr, ci_);
       }
       break;
     default:
-      tokenToString(t, sstr, ci_);
+      tokenAppendToOstream(t, sstr, ci_);
       break;
     }
   }
@@ -894,7 +876,7 @@ SSTPragma::tokenStreamToString(std::list<Token>::const_iterator beg,
                                CompilerInstance& CI)
 {
   for (auto iter=beg; iter != end; ++iter){
-    tokenToString(*iter, os, CI);
+    tokenAppendToOstream(*iter, os, CI);
   }
 }
 
