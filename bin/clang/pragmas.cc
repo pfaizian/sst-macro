@@ -131,7 +131,7 @@ std::string tokenToString(const Token& Tok, clang::CompilerInstance& Ci)
   }
 }
 
-static void tokenAppendToOstream(const Token& tok, std::ostream& os,
+void tokenAppendToOstream(const Token& tok, std::ostream& os,
                           clang::CompilerInstance& CI)
 {
   os << tokenToString(tok, CI);

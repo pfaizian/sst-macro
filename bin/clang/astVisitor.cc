@@ -3332,6 +3332,7 @@ PragmaActivateGuard::init()
       case SSTPragma::StackAlloc:
       case SSTPragma::ImplicitState:
       case SSTPragma::Memoize:  //always - regardless of skeletonization
+      case SSTPragma::Annotate:  //always - regardless of skeletonization
       case SSTPragma::GlobalVariable:
         skipVisit_ = false;
         activate = true;

@@ -163,6 +163,7 @@ struct SSTPragma {
 };
 
 std::string tokenToString(const clang::Token& Tok, clang::CompilerInstance& Ci);
+void tokenAppendToOstream(const clang::Token& tok, std::ostream& os, clang::CompilerInstance& CI);
 
 std::string getLiteralDataAsString(const clang::Token& Tok);
 
