@@ -50,22 +50,23 @@ Questions? Contact sst-macro-help@sandia.gov
 
 class SSTAnnotatePragma : public SSTPragma {
 public:
-  SSTAnnotatePragma(std::string AnnType, llvm::SmallVector<std::string, 2> Args);
+  SSTAnnotatePragma(std::string ToolStr,
+                    std::map<std::string, std::list<std::string>> Args);
   void activate(clang::Stmt *S, clang::Rewriter &R, PragmaConfig &Cfg) override;
   void activate(clang::Decl *D, clang::Rewriter &R, PragmaConfig &Cfg) override;
-  void deactivate(PragmaConfig &Cfg) override;
+
 private:
-  std::string AnnType; /// Type of Annotation
-  llvm::SmallVector<std::string, 2> AnnArgs; /// Arguments for Annotation
+  std::string Tool;
+  std::map<std::string, std::list<std::string>> ToolArgs;
 };
 
-class SSTAnnotatePragmaHandler : public SSTPragmaHandler {
+class SSTAnnotatePragmaHandler : public SSTStringMapPragmaHandler {
 public:
   SSTAnnotatePragmaHandler(SSTPragmaList &Plist, clang::CompilerInstance &Ci,
                            SkeletonASTVisitor &Visitor);
-private:
-  SSTPragma *
-  handleSSTPragma(const std::list<clang::Token> &Tokens) const override;
+
+  SSTPragma *allocatePragma(
+      std::map<std::string, std::list<std::string>> const &) const override;
 };
 
 #endif // bin_clang_AnnotatePragma_h

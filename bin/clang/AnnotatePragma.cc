@@ -46,18 +46,13 @@ Questions? Contact sst-macro-help@sandia.gov
 #include "astVisitor.h"
 #include <clang/AST/Stmt.h>
 
-SSTAnnotatePragma::SSTAnnotatePragma(std::string AnnType,
-                                     llvm::SmallVector<std::string, 2> Args)
-    : SSTPragma(Annotate), AnnType(std::move(AnnType)),
-      AnnArgs(std::move(Args)) {}
-
 namespace {
 clang::FunctionDecl const *getParentFunctionDecl(clang::Stmt const *S,
                                                  clang::ASTContext &Ctx) {
   for (auto const &P : Ctx.getParents(*S)) {
-    if (auto const *FD = P.get<clang::FunctionDecl>()) {
+    if (auto const FD = P.get<clang::FunctionDecl>()) {
       return FD;
-    } else if (auto const *ST = P.get<clang::Stmt>()) {
+    } else if (auto const ST = P.get<clang::Stmt>()) {
       return getParentFunctionDecl(ST, Ctx);
     }
   }
@@ -66,10 +61,11 @@ clang::FunctionDecl const *getParentFunctionDecl(clang::Stmt const *S,
 }
 
 // If this is inefficient switch to sstream @JJ
-std::string writeAnnotation(std::string const& Type, unsigned Start, unsigned End){
+std::string writeAnnotation(std::string const &Type, unsigned Start,
+                            unsigned End) {
   std::string Annotation = "__attribute__((annotate(\"" + Type + ":";
   for (auto I = Start; I <= End; ++I) {
-    if(I != Start) {
+    if (I != Start) {
       Annotation += ",";
     }
     Annotation += std::to_string(I);
@@ -79,6 +75,19 @@ std::string writeAnnotation(std::string const& Type, unsigned Start, unsigned En
 }
 } // namespace
 
+SSTAnnotatePragma::SSTAnnotatePragma(std::string ToolStr,
+    std::map<std::string, std::list<std::string>> Args)
+    : SSTPragma(Annotate), Tool(std::move(ToolStr)), ToolArgs(std::move(Args)) {
+      llvm::errs() << "Tool: " << Tool << "\n";
+      for(auto const& A : ToolArgs){
+        llvm::errs() << "\t" << A.first << ": ";
+        for(auto const& B : A.second){
+          llvm::errs() << B << " ";
+        }
+        llvm::errs() << "\n";
+      }
+    }
+
 void SSTAnnotatePragma::activate(clang::Stmt *S, clang::Rewriter &R,
                                  PragmaConfig &Cfg) {
   // Get the start and end source locations for this statement
@@ -86,19 +95,14 @@ void SSTAnnotatePragma::activate(clang::Stmt *S, clang::Rewriter &R,
   auto Begin = Sm.getPresumedLineNumber(S->getBeginLoc());
   auto End = Sm.getPresumedLineNumber(S->getEndLoc());
 
-  // Find the parent function of this statement
   auto &Ctx = Cfg.astVisitor->getCompilerInstance().getASTContext();
-  auto ParentFunc = getParentFunctionDecl(S, Ctx);
-  if (ParentFunc == nullptr) {
+  if (auto ParentFunc = getParentFunctionDecl(S, Ctx)) {
+    R.InsertTextBefore(ParentFunc->getBeginLoc(),
+                       writeAnnotation(Tool, Begin, End));
+  } else {
     errorAbort(S->getBeginLoc(), Cfg.astVisitor->getCompilerInstance(),
                "Couldn't find a parent function for the statement");
   }
-  auto FuncLoc = ParentFunc->getBeginLoc();
-
-  // TODO eventually we will need to decide what to do with the arguments
-
-  // Write the annotation on the function 
-  R.InsertTextBefore(FuncLoc, writeAnnotation(AnnType, Begin, End));
 }
 
 void SSTAnnotatePragma::activate(clang::Decl *D, clang::Rewriter &R,
@@ -109,23 +113,22 @@ void SSTAnnotatePragma::activate(clang::Decl *D, clang::Rewriter &R,
 
   llvm::errs() << "Decl range: " << Begin << ":" << End << "\n";
 }
-void SSTAnnotatePragma::deactivate(PragmaConfig &Cfg) {}
 
 SSTAnnotatePragmaHandler::SSTAnnotatePragmaHandler(SSTPragmaList &Plist,
                                                    clang::CompilerInstance &Ci,
                                                    SkeletonASTVisitor &Visitor)
-    : SSTPragmaHandler("annotate", Plist, Ci, Visitor) {}
+    : SSTStringMapPragmaHandler("placeholder", Plist, Ci, Visitor) {}
 
-SSTPragma *SSTAnnotatePragmaHandler::handleSSTPragma(
-    std::list<clang::Token> const &Tokens) const {
-  auto Begin = Tokens.begin();
-  std::string AnnotationType = tokenToString(*Begin, ci_);
+SSTPragma *SSTAnnotatePragmaHandler::allocatePragma(
+    std::map<std::string, std::list<std::string>> const &Args) const {
+  if(auto Tool = Args.find("tool") == Args.end()){
+    std::cerr << "AnnotatePragma must have a tool argument.\n";
+    exit(EXIT_FAILURE);
+  }
 
-  llvm::SmallVector<std::string, 2> Args(Tokens.size() - 1);
-  std::transform(++Begin, Tokens.end(), Args.begin(),
-                 [&Ci = this->ci_](clang::Token const &T) {
-                   return tokenToString(T, Ci);
-                 });
+  std::map<std::string, std::list<std::string>> Copy = Args;
+  auto Tool = Copy.find("tool")->second.front();
+  Copy.erase(Copy.find("tool"));
 
-  return new SSTAnnotatePragma(std::move(AnnotationType), std::move(Args));
+  return new SSTAnnotatePragma(Tool, std::move(Copy));
 }

@@ -1,10 +1,12 @@
 namespace HI{
+
+
+#pragma sst placeholder tool(instruction_count)
 double fxn(double const* __restrict__ a, int N, double &c) {
   double b = 0.0;
 
-#pragma sst annotate flopcount teststring
+#pragma sst placeholder tool(memtrace) inputs(N,a) outputs(time)
   for(auto i = 0; i < N; ++i){
-#pragma sst annotate whateva
     double e = 0.0;
     int d = i - 1;
     e += a[i];
@@ -24,7 +26,6 @@ int main() {
   int N = 10;
   double *a = new double[N]; 
   
-#pragma sst annotate memtrace
   const double my_pi = 3.14159265359;
   const double circ_in_yards = 43825760;
   for(auto i = 0; i < N; ++i){
