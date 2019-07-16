@@ -75,18 +75,10 @@ std::string writeAnnotation(std::string const &Type, unsigned Start,
 }
 } // namespace
 
-SSTAnnotatePragma::SSTAnnotatePragma(std::string ToolStr,
-    std::map<std::string, std::list<std::string>> Args)
+SSTAnnotatePragma::SSTAnnotatePragma(
+    std::string ToolStr, std::map<std::string, std::list<std::string>> Args)
     : SSTPragma(Annotate), Tool(std::move(ToolStr)), ToolArgs(std::move(Args)) {
-      llvm::errs() << "Tool: " << Tool << "\n";
-      for(auto const& A : ToolArgs){
-        llvm::errs() << "\t" << A.first << ": ";
-        for(auto const& B : A.second){
-          llvm::errs() << B << " ";
-        }
-        llvm::errs() << "\n";
-      }
-    }
+}
 
 void SSTAnnotatePragma::activate(clang::Stmt *S, clang::Rewriter &R,
                                  PragmaConfig &Cfg) {
@@ -107,11 +99,15 @@ void SSTAnnotatePragma::activate(clang::Stmt *S, clang::Rewriter &R,
 
 void SSTAnnotatePragma::activate(clang::Decl *D, clang::Rewriter &R,
                                  PragmaConfig &Cfg) {
-  auto &Sm = Cfg.astVisitor->getCompilerInstance().getSourceManager();
-  auto Begin = Sm.getPresumedLineNumber(D->getBeginLoc());
-  auto End = Sm.getPresumedLineNumber(D->getEndLoc());
+  auto LocalD = D;
+  if (auto TD = llvm::dyn_cast<clang::FunctionTemplateDecl>(LocalD)) {
+    LocalD = TD->getAsFunction();
+  }
 
-  llvm::errs() << "Decl range: " << Begin << ":" << End << "\n";
+  auto &Sm = Cfg.astVisitor->getCompilerInstance().getSourceManager();
+  auto Begin = Sm.getPresumedLineNumber(LocalD->getBeginLoc());
+  auto End = Sm.getPresumedLineNumber(LocalD->getEndLoc());
+  R.InsertTextBefore(LocalD->getBeginLoc(), writeAnnotation(Tool, Begin, End));
 }
 
 SSTAnnotatePragmaHandler::SSTAnnotatePragmaHandler(SSTPragmaList &Plist,
@@ -121,7 +117,7 @@ SSTAnnotatePragmaHandler::SSTAnnotatePragmaHandler(SSTPragmaList &Plist,
 
 SSTPragma *SSTAnnotatePragmaHandler::allocatePragma(
     std::map<std::string, std::list<std::string>> const &Args) const {
-  if(auto Tool = Args.find("tool") == Args.end()){
+  if (auto Tool = Args.find("tool") == Args.end()) {
     std::cerr << "AnnotatePragma must have a tool argument.\n";
     exit(EXIT_FAILURE);
   }
