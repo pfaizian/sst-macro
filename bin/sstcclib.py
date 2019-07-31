@@ -107,6 +107,15 @@ def run(typ, extraLibs="", includeMain=True, makeLibrary=False, redefineSymbols=
   from sstccvars import clangCppFlagsStr, clangLdFlagsStr
   from sstccvars import clangLibtoolingCxxFlagsStr, clangLibtoolingCFlagsStr
   from sstccvars import haveFloat128
+  from sstccvars import defaultIncludePaths
+
+  needfPIC = "fPIC" in sstCxxFlagsStr
+
+  rawPaths = defaultIncludePaths.split(":")
+  cleanPaths = []
+  for path in rawPaths:
+    cleanPaths.append(os.path.abspath(path))
+  defaultIncludePaths = ":".join(cleanPaths)
 
   if not os.environ.has_key("SSTMAC_HEADERS"):
     topdir = os.getcwd()
@@ -141,6 +150,7 @@ def run(typ, extraLibs="", includeMain=True, makeLibrary=False, redefineSymbols=
       '-lundumpi',
     ]
 
+  defaultIncludePaths += ":" + cleanFlag(includeDir)
 
   clangCppArgs = [
     cleanFlag("-I${includedir}/sstmac/clang_replacements"),
@@ -159,9 +169,9 @@ def run(typ, extraLibs="", includeMain=True, makeLibrary=False, redefineSymbols=
     flag = int(os.environ["SSTMAC_CONFIG"])
     keepExe = flag
 
-  parentProc = getProcName()
-  if (parentProc == "configure") and not keepExe:
-    sys.exit("using configure, please set SSTMAC_CONFIG=1")
+  parentProc = os.path.split(getProcName())[-1].strip()
+  if (parentProc == "configure" or parentProc == "cmake"):
+    makeBashExe = True
 
   haveClangSrcToSrc = bool(clangCppFlagsStr)
   clangDeglobal = None
@@ -255,6 +265,8 @@ def run(typ, extraLibs="", includeMain=True, makeLibrary=False, redefineSymbols=
       pass
     elif "-std=" in sarg:
       givenStdFlag=sarg
+      if "98" in givenStdFlag: #this is probably cmake being a jack-donkey
+        givenStdFlag="-std=c++1y"
     elif sarg.endswith('.cpp') or sarg.endswith('.cc') or sarg.endswith('.c') \
                                or sarg.endswith(".cxx") or sarg.endswith(".C"):
       sourceFiles.append(sarg)
@@ -274,6 +286,10 @@ def run(typ, extraLibs="", includeMain=True, makeLibrary=False, redefineSymbols=
 
     if not eatArg:
       validGccArgs.append(sarg)
+
+  if not "-fPIC" in givenFlags and needfPIC:
+    #assume fPIC was given
+    givenFlags.append("-fPIC")
 
   if keepExe and sstCore:
     sys.exit("Running with sst-core does not allow --keep-exe - must create libX.so")
@@ -627,6 +643,7 @@ def run(typ, extraLibs="", includeMain=True, makeLibrary=False, redefineSymbols=
       #don't use the clang --extra-arg anymore - put them after the '--'
       clangCmdArr.append(ppTmpFile)
       clangCmdArr.extend(forwardedClangArgs)
+      clangCmdArr.append("--system-includes=%s" % defaultIncludePaths)
       clangCmdArr.append("--")
       #all of the compiler options go after the -- separator
       #fix intrinsics which might not be known to clang if using a different compiler

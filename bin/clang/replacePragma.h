@@ -52,8 +52,7 @@ class SSTReplacePragma : public SSTPragma {
   std::string replacement_;
  public:
   SSTReplacePragma(const std::string& fxn, const std::string& replace) :
-    fxn_(fxn), replacement_(replace),
-    SSTPragma(Replace)
+    SSTPragma(Replace), fxn_(fxn), replacement_(replace)
   {
   }
 
@@ -99,7 +98,7 @@ class SSTStopReplacePragma : public SSTReplacePragma {
 
 class SSTInsteadPragma : public SSTPragma {
  public:
-  SSTInsteadPragma(const std::string& repl) : repl_(repl), SSTPragma(Instead) {}
+  SSTInsteadPragma(const std::string& repl) : SSTPragma(Instead), repl_(repl) {}
 
   void activate(clang::Stmt *s, clang::Rewriter &r, PragmaConfig &cfg) override;
 

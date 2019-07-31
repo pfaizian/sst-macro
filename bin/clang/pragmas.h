@@ -53,7 +53,7 @@ Questions? Contact sst-macro-help@sandia.gov
 class SkeletonASTVisitor;
 
 struct SSTPragma;
-struct SSTReplacePragma;
+class SSTReplacePragma;
 class SSTNullVariablePragma;
 class SSTNullVariableGeneratorPragma;
 
