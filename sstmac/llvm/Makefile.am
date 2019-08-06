@@ -24,6 +24,7 @@ lib_LTLIBRARIES = \
   libmemtrace.la
 
 libmemtrace_la_SOURCES = \
+	memtraceTools.cc \
   memtrace2.cc
 
 libmemtrace_la_LDFLAGS = \

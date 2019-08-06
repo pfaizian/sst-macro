@@ -1,4 +1,5 @@
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -9,68 +10,78 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include <algorithm>
 #include <map>
+#include <sstream>
 #include <string>
 #include <vector>
+
+#include "memtraceTools.h"
 
 using namespace llvm;
 
 namespace {
+StringSet<> FunctionCallWhiteList = {
+};
 
-SmallVector<int, 5> getLines(StringRef const &S);
-std::map<DIFile *, SmallVector<int, 5>> parseAnnotations(Module &M);
-StringMap<Function *> addFunctionDeclsToModule(Module &M);
-StringMap<StructType*> getStructTypes(Module &M);
+bool functionIsWhiteListed(StringRef const &Str) {
+  if(Str.startswith("__kmpc")){ // Whitelist builtin OMP Funcs
+    return true;
+  }
+  return FunctionCallWhiteList.count(Str);
+}
 
-enum class MemoryAccessType { Load, Store, MemIntrinsic, Call, Invoke };
+// Helper function for getting the size of loads and stores
+template <typename MemInst> uint64_t getMemSize(MemInst *I) {
+  if (auto VT = llvm::dyn_cast<llvm::VectorType>(I->getType())) {
+    return VT->getNumElements();
+  } else {
+    return 1;
+  }
+}
 
 struct MemtracePass : public ModulePass {
-  std::map<DIFile *, SmallVector<int, 5>> AnnotFuncs;
+  AnnotationMap AnnotFuncs;
+  StringMap<Function *> ExternalFunctions;
   static char ID;
-  StringMap<Function *> SSTFunctions;
-  StringMap<StructType*> NamedTypes;
+  enum class MemoryAccessType { Load, Store, MemIntrinsic, Call, Invoke };
 
   MemtracePass() : ModulePass(ID) {}
 
-  bool instMatchesLine(Instruction const &I) {
-    if (DILocation *Dl = I.getDebugLoc()) {
-      auto const &Pair = AnnotFuncs.find(Dl->getFile());
-      if (Pair != AnnotFuncs.end()) {
-        auto const &Lines = Pair->second;
-        return std::count(Lines.begin(), Lines.end(), Dl->getLine()) > 0;
+  SmallVector<Instruction *, 10> getTaggedInsts(Function &F) {
+    SmallVector<Instruction *, 10> Insts;
+    Instruction *Ret = nullptr;
+    for (auto &I : instructions(F)) {
+      auto AK = AnnotFuncs.matchInst(&I);
+      if (AK && AK.getValue() != AnnotationKind::Ignore) {
+        if (I.mayReadOrWriteMemory() || I.getOpcode() == Instruction::Ret) {
+          Insts.push_back(&I);
+        }
+      } else if (I.getOpcode() == Instruction::Ret) {
+        // If we didn't already capture the return then capture it now, but we
+        // only want to catpure it if there is at least 1 instrumented
+        // instruction
+        Ret = &I;
       }
     }
 
-    return false;
-  }
-
-  SmallVector<Instruction *, 10> getTaggedInsts(Function &F) {
-    SmallVector<Instruction *, 10> Insts;
-    for (auto &I : instructions(F)) {
-      if (instMatchesLine(I)) {
-        Insts.push_back(&I);
-      }
+    if (!Insts.empty() && Ret != nullptr) {
+      Insts.push_back(Ret);
     }
 
     return Insts;
   }
 
   void handleMemReadOrWrite(LoadInst *LD, Value *ThreadID) {
-    auto &Ctx = LD->getContext();
-    auto LoadFunc = SSTFunctions["Load"];
-
     auto Ptr = LD->getPointerOperand();
-    auto NumAddrsLoaded = [&LD] {
-      if (auto VT = dyn_cast<VectorType>(LD->getType())) {
-        return VT->getNumElements();
-      } else {
-        return uint64_t(1);
-      }
-    }();
+    auto NumAddrsLoaded = getMemSize(LD);
+
+    auto &Ctx = LD->getContext();
+    auto LoadFunc = ExternalFunctions["Load"];
 
     auto Bcast = new BitCastInst(Ptr, Type::getInt8PtrTy(Ctx), "", LD);
     auto LoadSize = ConstantInt::get(Ctx, APInt(64, NumAddrsLoaded, false));
@@ -79,17 +90,12 @@ struct MemtracePass : public ModulePass {
   }
 
   void handleMemReadOrWrite(StoreInst *SD, Value *ThreadID) {
-    auto &Ctx = SD->getContext();
-    auto StoreFunc = SSTFunctions["Store"];
 
     auto Ptr = SD->getPointerOperand();
-    auto NumAddrsStored = [&SD] {
-      if (auto VT = dyn_cast<VectorType>(SD->getType())) {
-        return VT->getNumElements();
-      } else {
-        return uint64_t(1);
-      }
-    }();
+    auto NumAddrsStored = getMemSize(SD);
+
+    auto &Ctx = SD->getContext();
+    auto StoreFunc = ExternalFunctions["Store"];
 
     auto Bcast = new BitCastInst(Ptr, Type::getInt8PtrTy(Ctx), "", SD);
     auto StoreSize = ConstantInt::get(Ctx, APInt(64, NumAddrsStored, false));
@@ -97,45 +103,80 @@ struct MemtracePass : public ModulePass {
                                  {Bcast, StoreSize, ThreadID}, "", SD);
   }
 
-  Value *createOrFindOMPThreadID(Function &F) {
-    if (!F.getName().contains(".omp")) {
-      return ConstantInt::get(F.getContext(), APInt(32, 0, false));
+  // Handles both CallInst and InvokeInst
+  template <typename CallTypeInst>
+  void checkCallForInstrumentation(CallTypeInst const *CTI) {
+    Function const *TargetFunc = CTI->getCalledFunction();
+
+    // If func is whitelisted then ignore
+    if (TargetFunc->isIntrinsic() ||
+        functionIsWhiteListed(TargetFunc->getName())) {
+      return;
     }
 
-    errs() << "\tFound omp func: " << F.getName() << "\n";
-    Instruction *Ident = nullptr;
-    for (auto &I : instructions(F)) {
-      if (auto Alloc = dyn_cast<AllocaInst>(&I)) {
-        if(Alloc->getType() == dyn_cast<PointerType>(NamedTypes["OMP_ID"])){
-          errs() << "\t\t" << *Alloc << "\n";
-        }
-      }
+    // If the function is annotated then ignore
+    if(AnnotFuncs.matchFunc(TargetFunc)){
+      return;
     }
 
-    return ConstantInt::get(F.getContext(), APInt(32, 0, false));
+    std::string CurrentFunction = CTI->getFunction()->getName();
+    std::string CalledFunction = TargetFunc->getName();
+
+    std::stringstream error;
+    error << "Function(" << CalledFunction
+          << ") was not instrumented. Called "
+             "from: "
+          << CurrentFunction << " either mark it or add it to the whitelist\n";
+
+    report_fatal_error(error.str());
   }
 
-  void handleMemReadOrWrite(MemIntrinsic const *Mi, Value *ThreadID) {}
+  void handleMemReadOrWrite(MemIntrinsic const *Mi, Value *ThreadID) {
+  }
+
+  Value *getOMPThreadID(Instruction *I) {
+    auto OmpNumThreads = ExternalFunctions["omp_get_thread_num"];
+    return CallInst::Create(OmpNumThreads->getFunctionType(), OmpNumThreads, "",
+                            I);
+  }
+
+  void startTracing(Instruction *I) {
+    auto StartTracing = ExternalFunctions["start_trace"];
+    CallInst::Create(StartTracing->getFunctionType(), StartTracing, "", I);
+  }
+
+  void stopTracing(Instruction *I) {
+    auto StopTracing = ExternalFunctions["stop_trace"];
+    CallInst::Create(StopTracing->getFunctionType(), StopTracing, "", I);
+  }
 
   void runOnFunction(Function &F) {
     auto taggedInsts = getTaggedInsts(F);
-    if (!taggedInsts.empty()) {
+    if (taggedInsts.empty()) {
+      return;
+    } else {
       errs() << "\n" << F.getName() << "\n";
     }
 
-    auto ThreadID = createOrFindOMPThreadID(F);
+    startTracing(taggedInsts.front());
+    auto ThreadID = getOMPThreadID(taggedInsts.front());
 
-    for (auto I : getTaggedInsts(F)) {
-      if (!I->mayReadOrWriteMemory()) {
-        continue;
-      }
-
+    for (auto I : taggedInsts) {
       switch (I->getOpcode()) {
       case Instruction::Load:
         handleMemReadOrWrite(dyn_cast<LoadInst>(I), ThreadID);
         break;
       case Instruction::Store:
         handleMemReadOrWrite(dyn_cast<StoreInst>(I), ThreadID);
+        break;
+      case Instruction::Call:
+        checkCallForInstrumentation(dyn_cast<CallInst>(I));
+        break;
+      case Instruction::Invoke:
+        checkCallForInstrumentation(dyn_cast<InvokeInst>(I));
+        break;
+      case Instruction::Ret:
+        stopTracing(I);
         break;
       default:
         // Can't get MemIntrisic from Opcode
@@ -148,13 +189,10 @@ struct MemtracePass : public ModulePass {
   }
 
   bool runOnModule(Module &M) override {
-    NamedTypes = getStructTypes(M);
     AnnotFuncs = parseAnnotations(M);
-    if (AnnotFuncs.empty()) {
-      return false;
-    }
 
-    SSTFunctions = addFunctionDeclsToModule(M);
+    ExternalFunctions = declareSSTFunctionsInModule(M, AnnotationKind::Memtrace);
+
     for (Function &F : M.functions()) {
       runOnFunction(F);
 
@@ -162,7 +200,7 @@ struct MemtracePass : public ModulePass {
       if (F.getName() == "main") {
         for (auto &I : instructions(F)) {
           if (auto Ret = dyn_cast<ReturnInst>(&I)) {
-            auto Dump = SSTFunctions["Dump"];
+            auto Dump = ExternalFunctions["Dump"];
             CallInst::Create(Dump->getFunctionType(), Dump, "", Ret);
           }
         }
@@ -172,92 +210,6 @@ struct MemtracePass : public ModulePass {
     return true;
   }
 };
-
-SmallVector<int, 5> getLines(StringRef const &S) {
-  auto NumStart = S.find_first_of("{") + 1;
-  auto NumEnd = S.find_first_of("}");
-  auto Temp = StringRef(S.data() + NumStart, NumEnd - NumStart);
-
-  SmallVector<StringRef, 5> Nums;
-  Temp.split(Nums, ",");
-
-  SmallVector<int, 5> Out;
-  for (auto const &Num : Nums) {
-    Out.push_back(std::stoi(Num));
-  }
-
-  return Out;
-}
-
-std::map<DIFile *, SmallVector<int, 5>> parseAnnotations(Module &M) {
-  std::map<DIFile *, SmallVector<int, 5>> FileLines;
-  for (auto const &I : M.globals()) {
-    if (I.getName() == "llvm.global.annotations") {
-      ConstantArray *CA = dyn_cast<ConstantArray>(I.getOperand(0));
-
-      for (auto OI = CA->op_begin(), End = CA->op_end(); OI != End; ++OI) {
-        ConstantStruct *CS = dyn_cast<ConstantStruct>(OI->get());
-        Function *FUNC = dyn_cast<Function>(CS->getOperand(0)->getOperand(0));
-
-        GlobalVariable *AnnotationGL =
-            dyn_cast<GlobalVariable>(CS->getOperand(1)->getOperand(0));
-
-        StringRef Annotation =
-            dyn_cast<ConstantDataArray>(AnnotationGL->getInitializer())
-                ->getAsCString();
-
-        if (Annotation.contains("memtrace")) {
-          FileLines[FUNC->getSubprogram()->getFile()] = getLines(Annotation);
-        }
-      }
-    }
-  }
-
-  return FileLines;
-}
-
-StringMap<StructType*> getStructTypes(Module &M) {
-  StringMap<StructType*> StructTypes;
-
-  for(auto &T : M.getIdentifiedStructTypes()){
-    errs() << *T << "\n";
-    if(T->getName().contains("ident_t")){
-      StructTypes["OMP_ID"] = T;
-    }
-  }
-
-  for(auto &T : StructTypes){
-    errs() << "Found: " << *T.second << "\n";
-  }
-    
-
-  return StructTypes;
-}
-
-StringMap<Function *> addFunctionDeclsToModule(Module &M) {
-  StringMap<Function *> Funcs;
-
-  { // Add SST Functions
-    auto IntPtrType8 = Type::getInt8PtrTy(M.getContext());
-    auto IntType32 = Type::getInt32Ty(M.getContext());
-    auto IntType64 = Type::getInt64Ty(M.getContext());
-    auto VoidType = Type::getVoidTy(M.getContext());
-    auto AddrTrack =
-        FunctionType::get(VoidType, {IntPtrType8, IntType64, IntType32}, false);
-    auto Load = Function::Create(AddrTrack, Function::ExternalLinkage,
-                                 "sstmac_address_load", M);
-    Funcs["Load"] = Load;
-    auto Store = Function::Create(AddrTrack, Function::ExternalLinkage,
-                                  "sstmac_address_store", M);
-    Funcs["Store"] = Store;
-
-    auto AddrsInfoDump = FunctionType::get(VoidType, {}, false);
-    auto InfoDump = Function::Create(AddrsInfoDump, Function::ExternalLinkage,
-                                     "sstmac_print_address_info", M);
-    Funcs["Dump"] = InfoDump;
-  }
-  return Funcs;
-}
 
 } // namespace
 

@@ -48,9 +48,9 @@ Questions? Contact sst-macro-help@sandia.gov
 
 namespace {
 clang::FunctionDecl const *getParentFunctionDecl(clang::Stmt const *S,
-                                                 clang::ASTContext &Ctx) {
+                                               clang::ASTContext &Ctx) {
   for (auto const &P : Ctx.getParents(*S)) {
-    if (auto const FD = P.get<clang::FunctionDecl>()) {
+    if (auto const FD = P.get<clang::FunctionDecl>()){
       return FD;
     } else if (auto const ST = P.get<clang::Stmt>()) {
       return getParentFunctionDecl(ST, Ctx);
