@@ -25,11 +25,10 @@
 using namespace llvm;
 
 namespace {
-StringSet<> FunctionCallWhiteList = {
-};
+StringSet<> FunctionCallWhiteList = {};
 
 bool functionIsWhiteListed(StringRef const &Str) {
-  if(Str.startswith("__kmpc")){ // Whitelist builtin OMP Funcs
+  if (Str.startswith("__kmpc")) { // Whitelist builtin OMP Funcs
     return true;
   }
   return FunctionCallWhiteList.count(Str);
@@ -103,19 +102,47 @@ struct MemtracePass : public ModulePass {
                                  {Bcast, StoreSize, ThreadID}, "", SD);
   }
 
+  void handleMemReadOrWrite(MemIntrinsic *Mi, Value *ThreadID) {
+    // First handle the store
+    auto OpSize = Mi->getLength();
+    auto WriteDest = Mi->getDest();
+
+    // Do Store
+    auto &Ctx = Mi->getContext();
+    auto StoreFunc = ExternalFunctions["Store"];
+    auto Bcast = new BitCastInst(WriteDest, Type::getInt8PtrTy(Ctx), "", Mi);
+    auto Call = CallInst::Create(StoreFunc->getFunctionType(), StoreFunc,
+                                 {Bcast, OpSize, ThreadID}, "", Mi);
+
+    // If a transfer type then do the load
+    if (auto Mt = dyn_cast<MemTransferInst>(Mi)) {
+      auto WriteSrc = Mt->getSource();
+      auto LoadFunc = ExternalFunctions["Load"];
+      auto Bcast = new BitCastInst(WriteSrc, Type::getInt8PtrTy(Ctx), "", Mt);
+      auto Call = CallInst::Create(LoadFunc->getFunctionType(), LoadFunc,
+                                   {Bcast, OpSize, ThreadID}, "", Mt);
+    }
+  }
+
   // Handles both CallInst and InvokeInst
   template <typename CallTypeInst>
-  void checkCallForInstrumentation(CallTypeInst const *CTI) {
+  void checkCallForInstrumentation(CallTypeInst *CTI, Value* ThreadID) {
     Function const *TargetFunc = CTI->getCalledFunction();
 
+    if (TargetFunc->isIntrinsic()){ 
+      if(auto MI = dyn_cast<MemIntrinsic>(CTI)){
+        handleMemReadOrWrite(MI, ThreadID); 
+      } 
+      return;
+    }
+    
     // If func is whitelisted then ignore
-    if (TargetFunc->isIntrinsic() ||
-        functionIsWhiteListed(TargetFunc->getName())) {
+    if( functionIsWhiteListed(TargetFunc->getName())) {
       return;
     }
 
     // If the function is annotated then ignore
-    if(AnnotFuncs.matchFunc(TargetFunc)){
+    if (AnnotFuncs.matchFunc(TargetFunc)) {
       return;
     }
 
@@ -131,8 +158,6 @@ struct MemtracePass : public ModulePass {
     report_fatal_error(error.str());
   }
 
-  void handleMemReadOrWrite(MemIntrinsic const *Mi, Value *ThreadID) {
-  }
 
   Value *getOMPThreadID(Instruction *I) {
     auto OmpNumThreads = ExternalFunctions["omp_get_thread_num"];
@@ -170,19 +195,15 @@ struct MemtracePass : public ModulePass {
         handleMemReadOrWrite(dyn_cast<StoreInst>(I), ThreadID);
         break;
       case Instruction::Call:
-        checkCallForInstrumentation(dyn_cast<CallInst>(I));
+        checkCallForInstrumentation(dyn_cast<CallInst>(I), ThreadID);
         break;
       case Instruction::Invoke:
-        checkCallForInstrumentation(dyn_cast<InvokeInst>(I));
+        checkCallForInstrumentation(dyn_cast<InvokeInst>(I), ThreadID);
         break;
       case Instruction::Ret:
         stopTracing(I);
         break;
       default:
-        // Can't get MemIntrisic from Opcode
-        if (auto Mi = dyn_cast<MemIntrinsic>(I)) {
-          handleMemReadOrWrite(Mi, ThreadID);
-        }
         break;
       }
     }
@@ -191,7 +212,8 @@ struct MemtracePass : public ModulePass {
   bool runOnModule(Module &M) override {
     AnnotFuncs = parseAnnotations(M);
 
-    ExternalFunctions = declareSSTFunctionsInModule(M, AnnotationKind::Memtrace);
+    ExternalFunctions =
+        declareSSTFunctionsInModule(M, AnnotationKind::Memtrace);
 
     for (Function &F : M.functions()) {
       runOnFunction(F);

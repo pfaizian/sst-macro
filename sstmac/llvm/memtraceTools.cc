@@ -129,7 +129,7 @@ StringMap<Function *> declareSSTFunctionsInModule(Module &M, AnnotationKind K) {
     // Add stop
     auto StopTrack = FunctionType::get(VoidType, false);
     auto Stop = Function::Create(StopTrack, Function::ExternalLinkage,
-                                 "sstmac_stop_trace", M);
+                                 "sstmac_end_trace", M);
     Funcs["stop_trace"] = Stop;
 
     // Add loads
