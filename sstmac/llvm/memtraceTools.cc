@@ -1,5 +1,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -20,95 +21,64 @@
 
 using namespace llvm;
 
-void AnnotationMap::addMatchAllFunction(Function const *F, AnnotationKind K) {
-  auto Iter = FunctionsToMatchAll.find(F);
-  if (Iter == FunctionsToMatchAll.end()) {
-    FunctionsToMatchAll.insert({F, K});
+void AnnotationMap::addFunctionAnnotation(Function const *F, AnnotationKind K) {
+  auto Iter = FunctionAnnotations.find(F);
+  if (Iter == FunctionAnnotations.end()) {
+    FunctionAnnotations.insert({F, K});
   } else {
     if (Iter->second != K) {
       report_fatal_error(
-          "Trying to set a match all function with different AnnotationKinds");
+          "Trying to set a function annotation with different AnnotationKinds");
     }
   }
 }
 
-namespace {
-SmallVector<std::pair<AnnotationKind, int>, 5>
-addAnnotataionKind(SmallVector<int, 5> &&In, AnnotationKind AK) {
-  SmallVector<std::pair<AnnotationKind, int>, 5> Out(In.size());
-  std::transform(In.begin(), In.end(), Out.begin(),
-                 [AK](int x) { return std::make_pair(AK, x); });
-  return Out;
-}
-} // namespace
+void AnnotationMap::addSrcLinesAnnotation(Function const *F,
+                                          SmallVector<int, 5> &&Lines,
+                                          AnnotationKind K) {
 
-void AnnotationMap::addFileAndLines(Function const *F,
-                                    SmallVector<int, 5> &&Lines,
-                                    AnnotationKind K) {
   auto File = F->getSubprogram()->getFile();
-  auto Iter = LinesToMatch.find(File);
-  if (Iter == LinesToMatch.end()) {
-    LinesToMatch.insert({File, addAnnotataionKind(std::move(Lines), K)});
-  } else { // Maybe check for confliciting AK types
-    auto AKLines = addAnnotataionKind(std::move(Lines), K);
-    Iter->second.append(AKLines.begin(), AKLines.end());
+  auto &LineMap = LineAnnotations[File];
+  for (auto const &L : Lines) {
+    LineMap[L] = K; // Don't check for collisions right now
   }
 }
 
-Optional<AnnotationKind>
-AnnotationMap::matchFileAndLines(llvm::DILocation const *Dl) const {
+AnnotationKind AnnotationMap::matchLine(llvm::DILocation const *Dl) const {
   if (!Dl) { // Check that our DebugLocation is valid
-    return None;
+    return AnnotationKind::None;
   }
 
   // If no matching file return None
   auto const *File = Dl->getFile();
-  auto FileIter = LinesToMatch.find(File);
-  if (FileIter == LinesToMatch.end()) {
-    return None;
+  auto FileIter = LineAnnotations.find(File);
+  if (FileIter == LineAnnotations.end()) {
+    return AnnotationKind::None;
   }
 
-  // Find the a matching line
-  auto const &AKLines = FileIter->second;
-  int TargetLine = Dl->getLine();
-  auto LineIter =
-      std::find_if(AKLines.begin(), AKLines.end(),
-                [TargetLine](std::pair<AnnotationKind, int> const &Line) {
-                  return Line.second == TargetLine;
-                });
-
-  if (LineIter == AKLines.end()) {
-    return None;
+  auto const &AKLineMap = FileIter->second;
+  auto LineIter = AKLineMap.find(Dl->getLine());
+  if (LineIter == AKLineMap.end()) {
+    return AnnotationKind::None;
   }
 
-  return LineIter->first;
+  return LineIter->second;
 }
 
-Optional<AnnotationKind>
-AnnotationMap::matchFunc(llvm::Function const *F) const {
-  auto FuncIter = FunctionsToMatchAll.find(F);
-  if (FuncIter == FunctionsToMatchAll.end()) {
-    return None;
+AnnotationKind AnnotationMap::matchFunc(llvm::Function const *F) const {
+  auto FuncIter = FunctionAnnotations.find(F);
+  if (FuncIter == FunctionAnnotations.end()) {
+    return AnnotationKind::None;
   }
 
   return FuncIter->second;
 }
 
-Optional<AnnotationKind>
-AnnotationMap::matchInst(llvm::Instruction const *I) const {
-  // First check if function match all exists
+int AnnotationMap::matchInst(llvm::Instruction const *I) const {
   auto FuncAK = matchFunc(I->getFunction());
-  if (FuncAK) {
-    return FuncAK;
-  }
+  auto LinesAK = matchLine(I->getDebugLoc());
 
-  // Check if lines match
-  auto LinesAK = matchFileAndLines(I->getDebugLoc());
-  if (LinesAK) {
-    return LinesAK;
-  }
-
-  return None;
+  return FuncAK | LinesAK;
 }
 
 StringMap<Function *> declareSSTFunctionsInModule(Module &M, AnnotationKind K) {
@@ -193,26 +163,42 @@ AnnotationMap parseAnnotations(Module &M) {
         StringRef Annotation =
             dyn_cast<ConstantDataArray>(AnnotationGL->getInitializer())
                 ->getAsCString();
+
         if (Annotation.contains("memtrace:{")) {
-          MyMap.addFileAndLines(Func, getLines(Annotation),
-                                AnnotationKind::Memtrace);
+          MyMap.addFunctionAnnotation(Func, AnnotationKind::Ignore);
+          MyMap.addSrcLinesAnnotation(Func, getLines(Annotation),
+                                      AnnotationKind::Memtrace);
         } else if (Annotation.contains("memtrace:ignore,{")) { // Ignore some
-          MyMap.addFileAndLines(Func, getLines(Annotation),
-                                AnnotationKind::Ignore);
+          MyMap.addFunctionAnnotation(Func, AnnotationKind::Ignore);
+          MyMap.addSrcLinesAnnotation(Func, getLines(Annotation),
+                                      AnnotationKind::Ignore);
         } else if (Annotation.contains("memtrace:ignore")) {
-          // Doesn't ingnore inlined instructions
-          MyMap.addMatchAllFunction(Func, AnnotationKind::Ignore);
+          MyMap.addFunctionAnnotation(Func, AnnotationKind::Ignore);
         }
         if (Annotation.contains("memtrace:all,{")) {
-          // Need both so that all instructions in the function are tested and
-          // all instructions inlined from the function are tested.
-          MyMap.addMatchAllFunction(Func, AnnotationKind::Memtrace);
-          MyMap.addFileAndLines(Func, getLines(Annotation),
-                                AnnotationKind::Memtrace);
+          MyMap.addFunctionAnnotation(Func, AnnotationKind::Memtrace);
+          MyMap.addSrcLinesAnnotation(Func, getLines(Annotation),
+                                      AnnotationKind::Memtrace);
         }
       }
     }
   }
 
   return MyMap;
+}
+
+// Find functions that need to get picked up that aren't annotated
+void checkRegexFuncMatches(llvm::Module &M, AnnotationMap &AM){
+  const StringMap<AnnotationKind> AlwaysMatch = {
+    {"omp", AnnotationKind::Memtrace}
+  };
+
+  for(auto const &F : M){
+    auto const& Name = F.getName();
+    for(auto const& Match : AlwaysMatch){
+      if(Name.contains(Match.getKey())){
+        AM.addFunctionAnnotation(&F,Match.second);
+      }
+    }
+  }
 }

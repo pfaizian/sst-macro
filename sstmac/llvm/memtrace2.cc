@@ -14,6 +14,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+
 #include <algorithm>
 #include <map>
 #include <sstream>
@@ -53,23 +56,21 @@ struct MemtracePass : public ModulePass {
 
   SmallVector<Instruction *, 10> getTaggedInsts(Function &F) {
     SmallVector<Instruction *, 10> Insts;
-    Instruction *Ret = nullptr;
+    SmallVector<Instruction *, 1> Returns;
     for (auto &I : instructions(F)) {
-      auto AK = AnnotFuncs.matchInst(&I);
-      if (AK && AK.getValue() != AnnotationKind::Ignore) {
-        if (I.mayReadOrWriteMemory() || I.getOpcode() == Instruction::Ret) {
-          Insts.push_back(&I);
-        }
-      } else if (I.getOpcode() == Instruction::Ret) {
-        // If we didn't already capture the return then capture it now, but we
-        // only want to catpure it if there is at least 1 instrumented
-        // instruction
-        Ret = &I;
+      // Save up returns
+      if(I.getOpcode() == Instruction::Ret){
+        Returns.push_back(&I);
+      }
+
+      if (I.mayReadOrWriteMemory() &&
+          (AnnotFuncs.matchInst(&I) & AnnotationKind::Memtrace)) {
+        Insts.push_back(&I);
       }
     }
 
-    if (!Insts.empty() && Ret != nullptr) {
-      Insts.push_back(Ret);
+    if(!Insts.empty()){ // Then we need to deal with the ret statements also
+      Insts.append(Returns.begin(), Returns.end());
     }
 
     return Insts;
@@ -77,13 +78,16 @@ struct MemtracePass : public ModulePass {
 
   void handleMemReadOrWrite(LoadInst *LD, Value *ThreadID) {
     auto Ptr = LD->getPointerOperand();
-    auto NumAddrsLoaded = getMemSize(LD);
+
+    auto DL = LD->getFunction()->getParent()->getDataLayout();
+    auto PtrT = LD->getPointerOperandType();
+    auto NumBytesLoaded = DL.getTypeStoreSize(PtrT) * getMemSize(LD);
 
     auto &Ctx = LD->getContext();
     auto LoadFunc = ExternalFunctions["Load"];
 
     auto Bcast = new BitCastInst(Ptr, Type::getInt8PtrTy(Ctx), "", LD);
-    auto LoadSize = ConstantInt::get(Ctx, APInt(64, NumAddrsLoaded, false));
+    auto LoadSize = ConstantInt::get(Ctx, APInt(64, NumBytesLoaded, false));
     auto Call = CallInst::Create(LoadFunc->getFunctionType(), LoadFunc,
                                  {Bcast, LoadSize, ThreadID}, "", LD);
   }
@@ -91,20 +95,23 @@ struct MemtracePass : public ModulePass {
   void handleMemReadOrWrite(StoreInst *SD, Value *ThreadID) {
 
     auto Ptr = SD->getPointerOperand();
-    auto NumAddrsStored = getMemSize(SD);
+
+    auto DL = SD->getFunction()->getParent()->getDataLayout();
+    auto PtrT = SD->getPointerOperandType();
+    auto NumBytesStored = DL.getTypeStoreSize(PtrT) * getMemSize(SD);
 
     auto &Ctx = SD->getContext();
     auto StoreFunc = ExternalFunctions["Store"];
 
     auto Bcast = new BitCastInst(Ptr, Type::getInt8PtrTy(Ctx), "", SD);
-    auto StoreSize = ConstantInt::get(Ctx, APInt(64, NumAddrsStored, false));
+    auto StoreSize = ConstantInt::get(Ctx, APInt(64, NumBytesStored, false));
     auto Call = CallInst::Create(StoreFunc->getFunctionType(), StoreFunc,
                                  {Bcast, StoreSize, ThreadID}, "", SD);
   }
 
   void handleMemReadOrWrite(MemIntrinsic *Mi, Value *ThreadID) {
     // First handle the store
-    auto OpSize = Mi->getLength();
+    auto OpSize = Mi->getLength(); // Num bytes
     auto WriteDest = Mi->getDest();
 
     // Do Store
@@ -124,20 +131,45 @@ struct MemtracePass : public ModulePass {
     }
   }
 
+  // TODO try to capture the store from the atomic also
+  void handleMemReadOrWrite(AtomicCmpXchgInst *ACX, Value *ThreadID) {
+    // I don't know if these are correct of not, but keep them here so that we
+    // can try to detect if the CmpXchg was sucessful in the future
+    auto ExchangeValue = ACX->getNextNonDebugInstruction();
+    auto ExchangeSucces = ExchangeValue->getNextNonDebugInstruction();
+    auto PostAtomicInst = ExchangeSucces->getNextNonDebugInstruction();
+
+    auto Ptr = ACX->getPointerOperand();
+
+    auto &Ctx = ACX->getContext();
+
+    auto DL = ACX->getFunction()->getParent()->getDataLayout();
+    auto PtrT = Ptr->getType();
+    auto NumBytesLoaded = DL.getTypeStoreSize(PtrT);
+
+    auto LoadFunc = ExternalFunctions["Load"];
+    auto Bcast =
+        new BitCastInst(Ptr, Type::getInt8PtrTy(Ctx), "", PostAtomicInst);
+    auto StoreSize = ConstantInt::get(Ctx, APInt(64, NumBytesLoaded, false));
+    auto Call =
+        CallInst::Create(LoadFunc->getFunctionType(), LoadFunc,
+                         {Bcast, StoreSize, ThreadID}, "", PostAtomicInst);
+  }
+
   // Handles both CallInst and InvokeInst
   template <typename CallTypeInst>
-  void checkCallForInstrumentation(CallTypeInst *CTI, Value* ThreadID) {
+  void checkCallForInstrumentation(CallTypeInst *CTI, Value *ThreadID) {
     Function const *TargetFunc = CTI->getCalledFunction();
 
-    if (TargetFunc->isIntrinsic()){ 
-      if(auto MI = dyn_cast<MemIntrinsic>(CTI)){
-        handleMemReadOrWrite(MI, ThreadID); 
-      } 
+    if (TargetFunc->isIntrinsic()) {
+      if (auto MI = dyn_cast<MemIntrinsic>(CTI)) {
+        handleMemReadOrWrite(MI, ThreadID);
+      }
       return;
     }
-    
+
     // If func is whitelisted then ignore
-    if( functionIsWhiteListed(TargetFunc->getName())) {
+    if (functionIsWhiteListed(TargetFunc->getName())) {
       return;
     }
 
@@ -158,16 +190,15 @@ struct MemtracePass : public ModulePass {
     report_fatal_error(error.str());
   }
 
+  // Ruturns a value that tells us what thread we are on. 
+  Value* startTracing(Function *F) {
+    auto StartTracing = ExternalFunctions["start_trace"];
+    CallInst::Create(StartTracing->getFunctionType(), StartTracing, "",
+                     &F->begin()->front());
 
-  Value *getOMPThreadID(Instruction *I) {
     auto OmpNumThreads = ExternalFunctions["omp_get_thread_num"];
     return CallInst::Create(OmpNumThreads->getFunctionType(), OmpNumThreads, "",
-                            I);
-  }
-
-  void startTracing(Instruction *I) {
-    auto StartTracing = ExternalFunctions["start_trace"];
-    CallInst::Create(StartTracing->getFunctionType(), StartTracing, "", I);
+                            &F->begin()->front());
   }
 
   void stopTracing(Instruction *I) {
@@ -183,9 +214,7 @@ struct MemtracePass : public ModulePass {
       errs() << "\n" << F.getName() << "\n";
     }
 
-    startTracing(taggedInsts.front());
-    auto ThreadID = getOMPThreadID(taggedInsts.front());
-
+    auto ThreadID = startTracing(&F);
     for (auto I : taggedInsts) {
       switch (I->getOpcode()) {
       case Instruction::Load:
@@ -203,15 +232,19 @@ struct MemtracePass : public ModulePass {
       case Instruction::Ret:
         stopTracing(I);
         break;
-      default:
+      case Instruction::AtomicCmpXchg:
+        handleMemReadOrWrite(dyn_cast<AtomicCmpXchgInst>(I), ThreadID);
         break;
+      default:
+        errs() << "\n" << *I << " " << I->getOpcodeName() << "\n";
+        llvm_unreachable("Unhandled MemoryOp\n");
       }
     }
   }
 
   bool runOnModule(Module &M) override {
     AnnotFuncs = parseAnnotations(M);
-
+    checkRegexFuncMatches(M, AnnotFuncs);
     ExternalFunctions =
         declareSSTFunctionsInModule(M, AnnotationKind::Memtrace);
 
@@ -236,4 +269,5 @@ struct MemtracePass : public ModulePass {
 } // namespace
 
 char MemtracePass::ID = 0;
-static RegisterPass<MemtracePass> X("sst-memtrace", "SSTMAC Memtrace Pass");
+static RegisterPass<MemtracePass> X("sst-memtrace", "SSTMAC Memtrace Pass",
+                                    false, false);
