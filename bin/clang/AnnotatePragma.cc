@@ -46,11 +46,15 @@ Questions? Contact sst-macro-help@sandia.gov
 #include "astVisitor.h"
 #include <clang/AST/Stmt.h>
 
+#include <string>
+#include <utility>
+#include <vector>
+
 namespace {
 clang::FunctionDecl const *getParentFunctionDecl(clang::Stmt const *S,
-                                               clang::ASTContext &Ctx) {
+                                                 clang::ASTContext &Ctx) {
   for (auto const &P : Ctx.getParents(*S)) {
-    if (auto const FD = P.get<clang::FunctionDecl>()){
+    if (auto const FD = P.get<clang::FunctionDecl>()) {
       return FD;
     } else if (auto const ST = P.get<clang::Stmt>()) {
       return getParentFunctionDecl(ST, Ctx);
@@ -60,18 +64,91 @@ clang::FunctionDecl const *getParentFunctionDecl(clang::Stmt const *S,
   return nullptr;
 }
 
-// If this is inefficient switch to sstream @JJ
-std::string writeAnnotation(std::string const &Type, unsigned Start,
-                            unsigned End) {
-  std::string Annotation = "__attribute__((annotate(\"" + Type + ":";
-  for (auto I = Start; I <= End; ++I) {
-    if (I != Start) {
+using ToolArgs = std::pair<std::string, std::vector<std::string>>;
+
+// Writes the tool as follows
+// annotate(toolname:arg1,arg2,arg3,{line1,line2,lin3}) unless one of the args
+std::string writeAnnotation(ToolArgs const &TA, unsigned Start, unsigned End) {
+  std::string Annotation = "__attribute__((annotate(\"" + TA.first + ":";
+  auto const &Args = TA.second;
+  bool Noinline = false;
+  int NumWritten = 0;
+  for (auto I = 0ul; I < Args.size(); ++I) {
+    if(Args[I] == "noinline"){
+      Noinline = true;
+      continue; // Don't pass noinline to the backend
+    }
+
+    if (NumWritten > 0) {
       Annotation += ",";
     }
-    Annotation += std::to_string(I);
+
+    Annotation += Args[I];
+    ++NumWritten;
   }
+
+  if (!Noinline) {
+    Annotation += (Args.empty()) ? "{" : ",{";
+    for (auto I = Start; I <= End; ++I) {
+      if (I != Start) {
+        Annotation += ",";
+      }
+      Annotation += std::to_string(I);
+    }
+    Annotation += "}";
+  }
+
   Annotation += "\"))) ";
   return Annotation;
+}
+
+std::string getName(std::string const &Tool) {
+  auto Pos = Tool.find('(');
+  if (Pos != std::string::npos) {
+    return Tool.substr(0, Pos);
+  }
+  return Tool;
+}
+
+// Parses out the args from a tool string, the arg themselves must be comma
+// separated and cannot themselves have args
+std::vector<std::string> getArgs(std::string const &Tool) {
+  // Check for Arguments
+  auto ArgStart = Tool.find('(');
+  if (ArgStart == std::string::npos) {
+    return {};
+  }
+
+  std::vector<std::string> Args;
+
+  auto ArgEnd = Tool.find_last_of(')');
+  if (ArgEnd == std::string::npos) {
+    std::cerr << "Missing final ) in: " << Tool << "\n";
+    exit(EXIT_FAILURE);
+  }
+  auto ArgNext = Tool.find_first_not_of('(', ArgStart);
+
+  // While not the final ) get comma seperated arguments
+  while (ArgNext < ArgEnd) {
+    // Find the next comma or the final )
+    auto ArgStop = std::min(Tool.find(',', ArgNext), ArgEnd);
+
+    // Get arg and remove white space
+    auto Arg = Tool.substr(ArgNext, ArgStop - ArgNext);
+    auto StrEnd = std::remove_if(Arg.begin(), Arg.end(), isspace);
+    Args.emplace_back(Arg.begin(), StrEnd);
+
+    // Advance to the next arg
+    ArgNext = Tool.find_first_not_of(',', ArgStop);
+  }
+
+  return Args;
+}
+
+// Returns a pair<string,vector<string>> where first is the name of the tool and
+// second is its arguments
+ToolArgs parseToolStr(std::string const &Tool) {
+  return {getName(Tool), getArgs(Tool)};
 }
 } // namespace
 
@@ -90,7 +167,7 @@ void SSTAnnotatePragma::activate(clang::Stmt *S, clang::Rewriter &R,
   auto &Ctx = Cfg.astVisitor->getCompilerInstance().getASTContext();
   if (auto ParentFunc = getParentFunctionDecl(S, Ctx)) {
     R.InsertTextBefore(ParentFunc->getBeginLoc(),
-                       writeAnnotation(Tool, Begin, End));
+                       writeAnnotation(parseToolStr(Tool), Begin, End));
   } else {
     errorAbort(S->getBeginLoc(), Cfg.astVisitor->getCompilerInstance(),
                "Couldn't find a parent function for the statement");
@@ -107,7 +184,8 @@ void SSTAnnotatePragma::activate(clang::Decl *D, clang::Rewriter &R,
   auto &Sm = Cfg.astVisitor->getCompilerInstance().getSourceManager();
   auto Begin = Sm.getPresumedLineNumber(LocalD->getBeginLoc());
   auto End = Sm.getPresumedLineNumber(LocalD->getEndLoc());
-  R.InsertTextBefore(LocalD->getBeginLoc(), writeAnnotation(Tool, Begin, End));
+  R.InsertTextBefore(LocalD->getBeginLoc(),
+                     writeAnnotation(parseToolStr(Tool), Begin, End));
 }
 
 SSTAnnotatePragmaHandler::SSTAnnotatePragmaHandler(SSTPragmaList &Plist,
