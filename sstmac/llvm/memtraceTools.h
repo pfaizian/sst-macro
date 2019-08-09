@@ -36,6 +36,8 @@ public:
   // to ignore non explicitly marked instructions
   AnnotationKind matchFunc(llvm::Function const *F) const;
 
+  void dumpMatches() const;
+
   void addFunctionAnnotation(llvm::Function const *, AnnotationKind);
   void addSrcLinesAnnotation(llvm::Function const *,
                              llvm::SmallVector<int, 5> &&, AnnotationKind);

@@ -1,7 +1,7 @@
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -75,6 +75,22 @@ AnnotationKind AnnotationMap::matchFunc(llvm::Function const *F) const {
   return FuncIter->second;
 }
 
+void AnnotationMap::dumpMatches() const {
+  errs() << "Annotated functions:\n";
+  for (auto const &Pair : FunctionAnnotations) {
+    errs() << "\t" << Pair.first->getName() << ": " << Pair.second << "\n";
+  }
+
+  errs() << "Annotated files and lines {Line,Annotation}:\n";
+  for (auto const &Pair : LineAnnotations) {
+    errs() << "\t" << Pair.first << "=" << Pair.first->getName() << ": ";
+    for (auto const &Pair2 : Pair.second) {
+      errs() << "{" << Pair2.first << "," << Pair2.second << "} ";
+    }
+    errs() << "\n";
+  }
+}
+
 int AnnotationMap::matchInst(llvm::Instruction const *I) const {
   auto FuncAK = matchFunc(I->getFunction());
   auto LinesAK = matchLine(I->getDebugLoc());
@@ -82,7 +98,7 @@ int AnnotationMap::matchInst(llvm::Instruction const *I) const {
   return FuncAK | LinesAK;
 }
 
-StringMap<Function *> declareSSTFunction(Module &M, AnnotationKind K) {
+StringMap<Function *> declareSSTFunctions(Module &M, AnnotationKind K) {
   StringMap<Function *> Funcs;
 
   // Types needed
@@ -145,8 +161,8 @@ SmallVector<int, 5> getLines(StringRef const &S) {
 SmallString<10> getAnnotation(ConstantStruct *CS) {
   auto AnnotationGL =
       dyn_cast<GlobalVariable>(CS->getOperand(1)->getOperand(0));
-      return dyn_cast<ConstantDataArray>(AnnotationGL->getInitializer())
-          ->getAsCString();
+  return dyn_cast<ConstantDataArray>(AnnotationGL->getInitializer())
+      ->getAsCString();
 }
 } // namespace
 
@@ -171,11 +187,13 @@ AnnotationMap parseAnnotations(Module &M) {
                                       AnnotationKind::Ignore);
         } else if (Annotation.count("memtrace:ignore")) {
           MyMap.addFunctionAnnotation(Func, AnnotationKind::Ignore);
-        }
-        if (Annotation.count("memtrace:all,{")) {
+        } else if (Annotation.count("memtrace:all,{")) {
           MyMap.addFunctionAnnotation(Func, AnnotationKind::Memtrace);
           MyMap.addSrcLinesAnnotation(Func, getLines(Annotation),
                                       AnnotationKind::Memtrace);
+        } // Doesn't check for inlined instructions
+        else if (Annotation.count("memtrace:all")) {
+          MyMap.addFunctionAnnotation(Func, AnnotationKind::Memtrace);
         }
       }
     }

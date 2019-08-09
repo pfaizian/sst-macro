@@ -167,14 +167,18 @@ struct MemtracePass : public ModulePass {
 
   // Ruturns a value that tells us which thread we are on.
   Value *startTracing(Function *F) {
-    auto StartTracing = SSTFunctions["start_trace"];
-    CallInst::Create(StartTracing->getFunctionType(), StartTracing, "",
-                     &F->front());
+    auto FirstInst = &F->front().front();
 
     // TODO Check that OMP is actually enabled otherwise return 0
     auto OmpNumThreads = SSTFunctions["omp_get_thread_num"];
-    return CallInst::Create(OmpNumThreads->getFunctionType(), OmpNumThreads, "",
-                            &F->front());
+    auto ThreadID = CallInst::Create(OmpNumThreads->getFunctionType(),
+                                     OmpNumThreads, "", FirstInst);
+
+    auto StartTracing = SSTFunctions["start_trace"];
+    CallInst::Create(StartTracing->getFunctionType(), StartTracing, "",
+                     FirstInst);
+
+    return ThreadID;
   }
 
   void stopTracing(Instruction *Ret) {
@@ -221,6 +225,7 @@ struct MemtracePass : public ModulePass {
   bool runOnModule(Module &M) override {
     Annotations = parseAnnotations(M);
     appendRegexFuncMatches(M, Annotations);
+    Annotations.dumpMatches();
     SSTFunctions = declareSSTFunctions(M, AnnotationKind::Memtrace);
 
     for (Function &F : M.functions()) {

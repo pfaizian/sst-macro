@@ -24,8 +24,8 @@ lib_LTLIBRARIES = \
   libmemtrace.la
 
 libmemtrace_la_SOURCES = \
-	memtraceTools.cc \
-  memtrace2.cc
+  memtrace2.cc \
+	memtraceTools.cc 
 
 libmemtrace_la_LDFLAGS = \
  ${LLVM_LDFLAGS} \
