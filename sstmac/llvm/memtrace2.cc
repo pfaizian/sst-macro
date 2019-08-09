@@ -28,7 +28,10 @@
 using namespace llvm;
 
 namespace {
-StringSet<> FunctionCallWhiteList = {};
+StringSet<> FunctionCallWhiteList = {
+    "gettimeofday",
+    "printf"
+};
 
 bool functionIsWhiteListed(StringRef const &Str) {
   if (Str.startswith("__kmpc")) { // Whitelist builtin OMP Funcs

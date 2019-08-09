@@ -69,7 +69,7 @@ void sstmac_print_address_info() {
 
   std::cout << "Number of stored bytes: " << stored << "\n";
   std::cout << "Number of loaded bytes: " << loaded << "\n\n";
-
+#if 0
   std::stable_sort(LoadAddrs.begin(), LoadAddrs.end(),
                    [](AddrData const &a, AddrData const &b) {
                      return a.thread_id < b.thread_id;
@@ -126,5 +126,6 @@ void sstmac_print_address_info() {
     }
     std::cout << "\n";
   }
+#endif
 }
 }
