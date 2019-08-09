@@ -12,8 +12,10 @@
 #include "llvm/Support/Casting.h"
 #include <cstdint>
 
-// List of annotation types that our module might ask for.  The purpose of this
-// list is mostly to help decide which functions to declare in the module.
+// How we mark lines and functions, it is up to the user to decide what to do if
+// we pass back something like Ignore | Memtrace | OpCount.  This is possible
+// because a function might be marked ignore, but an instruction inlined into
+// that function might be marked Memtrace | OpCount.
 enum AnnotationKind {
   None = 1 << 0,
   Ignore = 1 << 1,
@@ -21,37 +23,39 @@ enum AnnotationKind {
   OpCount = 1 << 3
 };
 
-/// Contains all the source info needed to generate annotations.
 class AnnotationMap {
 public:
   AnnotationMap() = default;
   AnnotationMap(AnnotationMap const &) = default;
 
+  // Determines if a instruction is in the Map, returns None if it is not
   int matchInst(llvm::Instruction const *I) const;
+  
+  // Returns the annotation type for the function, if only specific lines in a
+  // function are marked for annotations then this returns ignore since we want
+  // to ignore non explicitly marked instructions
   AnnotationKind matchFunc(llvm::Function const *F) const;
 
   void addFunctionAnnotation(llvm::Function const *, AnnotationKind);
-  void addSrcLinesAnnotation(llvm::Function const *, llvm::SmallVector<int, 5> &&,
-                       AnnotationKind);
+  void addSrcLinesAnnotation(llvm::Function const *,
+                             llvm::SmallVector<int, 5> &&, AnnotationKind);
 
 private:
-  AnnotationKind
-  matchLine(llvm::DILocation const *) const;
+  AnnotationKind matchLine(llvm::DILocation const *) const;
 
   llvm::DenseMap<llvm::Function const *, AnnotationKind> FunctionAnnotations;
   llvm::DenseMap<llvm::DIFile const *, llvm::DenseMap<int, AnnotationKind>>
       LineAnnotations;
 };
 
-// Find the annotated functions
 AnnotationMap parseAnnotations(llvm::Module &M);
 
-// Find functions that need to get picked up that aren't annotated
-void checkRegexFuncMatches(llvm::Module &, AnnotationMap &);
+// Find functions that need to get picked up that aren't already annotated
+void appendRegexFuncMatches(llvm::Module &, AnnotationMap &);
 
 // Declare the functions that we need to call for the SST code and return
 // a map to them so that we can use them in passes
-llvm::StringMap<llvm::Function *> declareSSTFunctionsInModule(llvm::Module &,
-                                                              AnnotationKind);
+llvm::StringMap<llvm::Function *> declareSSTFunctions(llvm::Module &,
+                                                      AnnotationKind);
 
 #endif // SSTMAC_LLVM_MEMTRACE_TOOLS_H_INCLUDED

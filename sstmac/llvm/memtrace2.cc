@@ -37,8 +37,8 @@ bool functionIsWhiteListed(StringRef const &Str) {
   return FunctionCallWhiteList.count(Str);
 }
 
-// Helper function for getting the size of loads and stores
-template <typename MemInst> uint64_t getMemSize(MemInst *I) {
+// Checks if I is a vector
+uint64_t getVectorSize(Instruction const *I) {
   if (auto VT = llvm::dyn_cast<llvm::VectorType>(I->getType())) {
     return VT->getNumElements();
   } else {
@@ -46,135 +46,110 @@ template <typename MemInst> uint64_t getMemSize(MemInst *I) {
   }
 }
 
+// Determines the number of bytes loaded or stored by AtomicCmpXchgInst,
+// LoadInst, and StoreInst
+template <typename LoadStore> Value *getByteCount(LoadStore const *LS) {
+  auto DL = LS->getFunction()->getParent()->getDataLayout();
+  auto Ptr = LS->getPointerOperand();
+  auto SizeInBytes = DL.getTypeStoreSize(Ptr->getType()) * getVectorSize(LS);
+  return ConstantInt::get(LS->getContext(), APInt(64, SizeInBytes, false));
+}
+Value *getByteCount(MemIntrinsic const *MI) { return MI->getLength(); }
+
+// Casts a pointer Value to an int8* which appears to be how llvm passes void*
+BitCastInst *toI8Ptr(Value *V, Instruction *InsertBefore) {
+  assert(V->getType()->isPointerTy() && "V needs to be a pointer");
+  return new BitCastInst(V, Type::getInt8PtrTy(V->getContext()), "",
+                         InsertBefore);
+}
+
+// This function will bit cast the target address to an int8* then determine how
+// many bytes the load/store represents and finally pass that info into an SST
+// backend function
+template <typename InstType>
+void handleMemOp(Value *TargetAddress, InstType *InsertBefore, Value *ThreadID,
+                 Function *SSTFunc) {
+  auto MemAddress = toI8Ptr(TargetAddress, InsertBefore);
+  ArrayRef<Value *> Args = {MemAddress, getByteCount(InsertBefore), ThreadID};
+  CallInst::Create(SSTFunc->getFunctionType(), SSTFunc, Args, "", InsertBefore);
+}
+
 struct MemtracePass : public ModulePass {
-  AnnotationMap AnnotFuncs;
-  StringMap<Function *> ExternalFunctions;
+  AnnotationMap Annotations;
+  StringMap<Function *> SSTFunctions;
   static char ID;
-  enum class MemoryAccessType { Load, Store, MemIntrinsic, Call, Invoke };
 
   MemtracePass() : ModulePass(ID) {}
 
   SmallVector<Instruction *, 10> getTaggedInsts(Function &F) {
     SmallVector<Instruction *, 10> Insts;
-    SmallVector<Instruction *, 1> Returns;
     for (auto &I : instructions(F)) {
-      // Save up returns
-      if(I.getOpcode() == Instruction::Ret){
-        Returns.push_back(&I);
-      }
-
       if (I.mayReadOrWriteMemory() &&
-          (AnnotFuncs.matchInst(&I) & AnnotationKind::Memtrace)) {
+          (Annotations.matchInst(&I) & AnnotationKind::Memtrace)) {
         Insts.push_back(&I);
       }
     }
-
-    if(!Insts.empty()){ // Then we need to deal with the ret statements also
-      Insts.append(Returns.begin(), Returns.end());
-    }
-
     return Insts;
   }
 
-  void handleMemReadOrWrite(LoadInst *LD, Value *ThreadID) {
-    auto Ptr = LD->getPointerOperand();
-
-    auto DL = LD->getFunction()->getParent()->getDataLayout();
-    auto PtrT = LD->getPointerOperandType();
-    auto NumBytesLoaded = DL.getTypeStoreSize(PtrT) * getMemSize(LD);
-
-    auto &Ctx = LD->getContext();
-    auto LoadFunc = ExternalFunctions["Load"];
-
-    auto Bcast = new BitCastInst(Ptr, Type::getInt8PtrTy(Ctx), "", LD);
-    auto LoadSize = ConstantInt::get(Ctx, APInt(64, NumBytesLoaded, false));
-    auto Call = CallInst::Create(LoadFunc->getFunctionType(), LoadFunc,
-                                 {Bcast, LoadSize, ThreadID}, "", LD);
+  void appendReturnInsts(Function &F, SmallVector<Instruction *, 10> &Insts) {
+    for (auto &I : instructions(F)) {
+      if (I.getOpcode() == Instruction::Ret) {
+        Insts.push_back(&I);
+      }
+    }
   }
 
-  void handleMemReadOrWrite(StoreInst *SD, Value *ThreadID) {
-
-    auto Ptr = SD->getPointerOperand();
-
-    auto DL = SD->getFunction()->getParent()->getDataLayout();
-    auto PtrT = SD->getPointerOperandType();
-    auto NumBytesStored = DL.getTypeStoreSize(PtrT) * getMemSize(SD);
-
-    auto &Ctx = SD->getContext();
-    auto StoreFunc = ExternalFunctions["Store"];
-
-    auto Bcast = new BitCastInst(Ptr, Type::getInt8PtrTy(Ctx), "", SD);
-    auto StoreSize = ConstantInt::get(Ctx, APInt(64, NumBytesStored, false));
-    auto Call = CallInst::Create(StoreFunc->getFunctionType(), StoreFunc,
-                                 {Bcast, StoreSize, ThreadID}, "", SD);
+  void handleMemoryInst(LoadInst *LD, Value *ThreadID) {
+    handleMemOp(LD->getPointerOperand(), LD, ThreadID, SSTFunctions["Load"]);
   }
 
-  void handleMemReadOrWrite(MemIntrinsic *Mi, Value *ThreadID) {
-    // First handle the store
-    auto OpSize = Mi->getLength(); // Num bytes
-    auto WriteDest = Mi->getDest();
+  void handleMemoryInst(StoreInst *SD, Value *ThreadID) {
+    handleMemOp(SD->getPointerOperand(), SD, ThreadID, SSTFunctions["Store"]);
+  }
 
-    // Do Store
-    auto &Ctx = Mi->getContext();
-    auto StoreFunc = ExternalFunctions["Store"];
-    auto Bcast = new BitCastInst(WriteDest, Type::getInt8PtrTy(Ctx), "", Mi);
-    auto Call = CallInst::Create(StoreFunc->getFunctionType(), StoreFunc,
-                                 {Bcast, OpSize, ThreadID}, "", Mi);
-
-    // If a transfer type then do the load
-    if (auto Mt = dyn_cast<MemTransferInst>(Mi)) {
-      auto WriteSrc = Mt->getSource();
-      auto LoadFunc = ExternalFunctions["Load"];
-      auto Bcast = new BitCastInst(WriteSrc, Type::getInt8PtrTy(Ctx), "", Mt);
-      auto Call = CallInst::Create(LoadFunc->getFunctionType(), LoadFunc,
-                                   {Bcast, OpSize, ThreadID}, "", Mt);
+  // MemIntrinsic (memset, memcpy, etc) might store only or might do both
+  void handleMemoryInst(MemIntrinsic *Mi, Value *ThreadID) {
+    handleMemOp(Mi->getDest(), Mi, ThreadID, SSTFunctions["Store"]); // Store
+    if (auto Mt = dyn_cast<MemTransferInst>(Mi)) { // If transfer then Load
+      handleMemOp(Mt->getSource(), Mi, ThreadID, SSTFunctions["Load"]);
     }
   }
 
   // TODO try to capture the store from the atomic also
-  void handleMemReadOrWrite(AtomicCmpXchgInst *ACX, Value *ThreadID) {
-    // I don't know if these are correct of not, but keep them here so that we
-    // can try to detect if the CmpXchg was sucessful in the future
+  void handleMemoryInst(AtomicCmpXchgInst *ACX, Value *ThreadID) {
     auto ExchangeValue = ACX->getNextNonDebugInstruction();
     auto ExchangeSucces = ExchangeValue->getNextNonDebugInstruction();
+    // We want to use this instruction to insert before since it is the first
+    // once after the check of the atomic condition
     auto PostAtomicInst = ExchangeSucces->getNextNonDebugInstruction();
 
-    auto Ptr = ACX->getPointerOperand();
-
-    auto &Ctx = ACX->getContext();
-
-    auto DL = ACX->getFunction()->getParent()->getDataLayout();
-    auto PtrT = Ptr->getType();
-    auto NumBytesLoaded = DL.getTypeStoreSize(PtrT);
-
-    auto LoadFunc = ExternalFunctions["Load"];
-    auto Bcast =
-        new BitCastInst(Ptr, Type::getInt8PtrTy(Ctx), "", PostAtomicInst);
-    auto StoreSize = ConstantInt::get(Ctx, APInt(64, NumBytesLoaded, false));
-    auto Call =
-        CallInst::Create(LoadFunc->getFunctionType(), LoadFunc,
-                         {Bcast, StoreSize, ThreadID}, "", PostAtomicInst);
+    auto OpSize = getByteCount(ACX);
+    auto Address = toI8Ptr(ACX->getPointerOperand(), PostAtomicInst);
+    auto LoadFunc = SSTFunctions["Load"];
+    CallInst::Create(LoadFunc->getFunctionType(), LoadFunc,
+                     {Address, OpSize, ThreadID}, "", PostAtomicInst);
   }
 
   // Handles both CallInst and InvokeInst
   template <typename CallTypeInst>
-  void checkCallForInstrumentation(CallTypeInst *CTI, Value *ThreadID) {
+  void handleMemCall(CallTypeInst *CTI, Value *ThreadID) {
     Function const *TargetFunc = CTI->getCalledFunction();
 
+    // Most intrinsics we don't care about but we do care about the memory ones
     if (TargetFunc->isIntrinsic()) {
       if (auto MI = dyn_cast<MemIntrinsic>(CTI)) {
-        handleMemReadOrWrite(MI, ThreadID);
+        handleMemoryInst(MI, ThreadID);
       }
       return;
     }
 
-    // If func is whitelisted then ignore
     if (functionIsWhiteListed(TargetFunc->getName())) {
       return;
     }
 
     // If the function is annotated then ignore
-    if (AnnotFuncs.matchFunc(TargetFunc)) {
+    if (Annotations.matchFunc(TargetFunc) != AnnotationKind::None) {
       return;
     }
 
@@ -190,20 +165,21 @@ struct MemtracePass : public ModulePass {
     report_fatal_error(error.str());
   }
 
-  // Ruturns a value that tells us what thread we are on. 
-  Value* startTracing(Function *F) {
-    auto StartTracing = ExternalFunctions["start_trace"];
+  // Ruturns a value that tells us which thread we are on.
+  Value *startTracing(Function *F) {
+    auto StartTracing = SSTFunctions["start_trace"];
     CallInst::Create(StartTracing->getFunctionType(), StartTracing, "",
-                     &F->begin()->front());
+                     &F->front());
 
-    auto OmpNumThreads = ExternalFunctions["omp_get_thread_num"];
+    // TODO Check that OMP is actually enabled otherwise return 0
+    auto OmpNumThreads = SSTFunctions["omp_get_thread_num"];
     return CallInst::Create(OmpNumThreads->getFunctionType(), OmpNumThreads, "",
-                            &F->begin()->front());
+                            &F->front());
   }
 
-  void stopTracing(Instruction *I) {
-    auto StopTracing = ExternalFunctions["stop_trace"];
-    CallInst::Create(StopTracing->getFunctionType(), StopTracing, "", I);
+  void stopTracing(Instruction *Ret) {
+    auto StopTracing = SSTFunctions["stop_trace"];
+    CallInst::Create(StopTracing->getFunctionType(), StopTracing, "", Ret);
   }
 
   void runOnFunction(Function &F) {
@@ -211,29 +187,29 @@ struct MemtracePass : public ModulePass {
     if (taggedInsts.empty()) {
       return;
     } else {
-      errs() << "\n" << F.getName() << "\n";
+      appendReturnInsts(F, taggedInsts);
     }
 
     auto ThreadID = startTracing(&F);
     for (auto I : taggedInsts) {
       switch (I->getOpcode()) {
       case Instruction::Load:
-        handleMemReadOrWrite(dyn_cast<LoadInst>(I), ThreadID);
+        handleMemoryInst(dyn_cast<LoadInst>(I), ThreadID);
         break;
       case Instruction::Store:
-        handleMemReadOrWrite(dyn_cast<StoreInst>(I), ThreadID);
+        handleMemoryInst(dyn_cast<StoreInst>(I), ThreadID);
+        break;
+      case Instruction::AtomicCmpXchg:
+        handleMemoryInst(dyn_cast<AtomicCmpXchgInst>(I), ThreadID);
         break;
       case Instruction::Call:
-        checkCallForInstrumentation(dyn_cast<CallInst>(I), ThreadID);
+        handleMemCall(dyn_cast<CallInst>(I), ThreadID);
         break;
       case Instruction::Invoke:
-        checkCallForInstrumentation(dyn_cast<InvokeInst>(I), ThreadID);
+        handleMemCall(dyn_cast<InvokeInst>(I), ThreadID);
         break;
       case Instruction::Ret:
         stopTracing(I);
-        break;
-      case Instruction::AtomicCmpXchg:
-        handleMemReadOrWrite(dyn_cast<AtomicCmpXchgInst>(I), ThreadID);
         break;
       default:
         errs() << "\n" << *I << " " << I->getOpcodeName() << "\n";
@@ -243,10 +219,9 @@ struct MemtracePass : public ModulePass {
   }
 
   bool runOnModule(Module &M) override {
-    AnnotFuncs = parseAnnotations(M);
-    checkRegexFuncMatches(M, AnnotFuncs);
-    ExternalFunctions =
-        declareSSTFunctionsInModule(M, AnnotationKind::Memtrace);
+    Annotations = parseAnnotations(M);
+    appendRegexFuncMatches(M, Annotations);
+    SSTFunctions = declareSSTFunctions(M, AnnotationKind::Memtrace);
 
     for (Function &F : M.functions()) {
       runOnFunction(F);
@@ -255,7 +230,7 @@ struct MemtracePass : public ModulePass {
       if (F.getName() == "main") {
         for (auto &I : instructions(F)) {
           if (auto Ret = dyn_cast<ReturnInst>(&I)) {
-            auto Dump = ExternalFunctions["Dump"];
+            auto Dump = SSTFunctions["Dump"];
             CallInst::Create(Dump->getFunctionType(), Dump, "", Ret);
           }
         }

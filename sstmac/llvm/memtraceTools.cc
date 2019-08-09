@@ -1,6 +1,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -81,49 +82,44 @@ int AnnotationMap::matchInst(llvm::Instruction const *I) const {
   return FuncAK | LinesAK;
 }
 
-StringMap<Function *> declareSSTFunctionsInModule(Module &M, AnnotationKind K) {
+StringMap<Function *> declareSSTFunction(Module &M, AnnotationKind K) {
   StringMap<Function *> Funcs;
 
-  { // Add SST Functions
-    auto IntPtrType8 = Type::getInt8PtrTy(M.getContext());
-    auto IntType32 = Type::getInt32Ty(M.getContext());
-    auto IntType64 = Type::getInt64Ty(M.getContext());
-    auto VoidType = Type::getVoidTy(M.getContext());
+  // Types needed
+  auto IntPtrType8 = Type::getInt8PtrTy(M.getContext());
+  auto IntType32 = Type::getInt32Ty(M.getContext());
+  auto IntType64 = Type::getInt64Ty(M.getContext());
+  auto VoidType = Type::getVoidTy(M.getContext());
 
-    // Add start
-    auto StartTrack = FunctionType::get(VoidType, false);
-    auto Start = Function::Create(StartTrack, Function::ExternalLinkage,
-                                  "sstmac_start_trace", M);
-    Funcs["start_trace"] = Start;
+  // Functions we always need
+  {
+    auto StartType = FunctionType::get(VoidType, false);
+    Funcs["start_trace"] = Function::Create(
+        StartType, Function::ExternalLinkage, "sstmac_start_trace", M);
 
-    // Add stop
-    auto StopTrack = FunctionType::get(VoidType, false);
-    auto Stop = Function::Create(StopTrack, Function::ExternalLinkage,
-                                 "sstmac_end_trace", M);
-    Funcs["stop_trace"] = Stop;
+    auto StopType = StartType;
+    Funcs["stop_trace"] = Function::Create(StopType, Function::ExternalLinkage,
+                                           "sstmac_end_trace", M);
 
-    // Add loads
-    auto AddrTrack =
+    // TODO Disable this if we are not using OMP
+    auto ThreadNumType = FunctionType::get(IntType32, false);
+    Funcs["omp_get_thread_num"] = Function::Create(
+        ThreadNumType, Function::ExternalLinkage, "omp_get_thread_num", M);
+  }
+
+  if (K == AnnotationKind::Memtrace) {
+    auto LoadType =
         FunctionType::get(VoidType, {IntPtrType8, IntType64, IntType32}, false);
-    auto Load = Function::Create(AddrTrack, Function::ExternalLinkage,
-                                 "sstmac_address_load", M);
-    Funcs["Load"] = Load;
+    Funcs["Load"] = Function::Create(LoadType, Function::ExternalLinkage,
+                                     "sstmac_address_load", M);
 
-    // Add stores
-    auto Store = Function::Create(AddrTrack, Function::ExternalLinkage,
-                                  "sstmac_address_store", M);
-    Funcs["Store"] = Store;
+    auto StoreType = LoadType;
+    Funcs["Store"] = Function::Create(StoreType, Function::ExternalLinkage,
+                                      "sstmac_address_store", M);
 
-    // Dump Info
-    auto AddrsInfoDump = FunctionType::get(VoidType, false);
-    auto InfoDump = Function::Create(AddrsInfoDump, Function::ExternalLinkage,
+    auto DumpType = FunctionType::get(VoidType, false);
+    Funcs["Dump"] = Function::Create(DumpType, Function::ExternalLinkage,
                                      "sstmac_print_address_info", M);
-    Funcs["Dump"] = InfoDump;
-
-    auto OmpNumThreadsTrack = FunctionType::get(IntType32, false);
-    auto OmpNumThreads = Function::Create(
-        OmpNumThreadsTrack, Function::ExternalLinkage, "omp_get_thread_num", M);
-    Funcs["omp_get_thread_num"] = OmpNumThreads;
   }
 
   return Funcs;
@@ -145,6 +141,13 @@ SmallVector<int, 5> getLines(StringRef const &S) {
 
   return Out;
 }
+
+SmallString<10> getAnnotation(ConstantStruct *CS) {
+  auto AnnotationGL =
+      dyn_cast<GlobalVariable>(CS->getOperand(1)->getOperand(0));
+      return dyn_cast<ConstantDataArray>(AnnotationGL->getInitializer())
+          ->getAsCString();
+}
 } // namespace
 
 AnnotationMap parseAnnotations(Module &M) {
@@ -154,28 +157,22 @@ AnnotationMap parseAnnotations(Module &M) {
       ConstantArray *CA = dyn_cast<ConstantArray>(I.getOperand(0));
 
       for (auto OI = CA->op_begin(), End = CA->op_end(); OI != End; ++OI) {
-        ConstantStruct *CS = dyn_cast<ConstantStruct>(OI->get());
-        Function *Func = dyn_cast<Function>(CS->getOperand(0)->getOperand(0));
+        auto CS = dyn_cast<ConstantStruct>(OI->get());
+        auto Func = dyn_cast<Function>(CS->getOperand(0)->getOperand(0));
+        auto Annotation = getAnnotation(CS);
 
-        GlobalVariable *AnnotationGL =
-            dyn_cast<GlobalVariable>(CS->getOperand(1)->getOperand(0));
-
-        StringRef Annotation =
-            dyn_cast<ConstantDataArray>(AnnotationGL->getInitializer())
-                ->getAsCString();
-
-        if (Annotation.contains("memtrace:{")) {
+        if (Annotation.count("memtrace:{")) {
           MyMap.addFunctionAnnotation(Func, AnnotationKind::Ignore);
           MyMap.addSrcLinesAnnotation(Func, getLines(Annotation),
                                       AnnotationKind::Memtrace);
-        } else if (Annotation.contains("memtrace:ignore,{")) { // Ignore some
+        } else if (Annotation.count("memtrace:ignore,{")) { // Ignore some
           MyMap.addFunctionAnnotation(Func, AnnotationKind::Ignore);
           MyMap.addSrcLinesAnnotation(Func, getLines(Annotation),
                                       AnnotationKind::Ignore);
-        } else if (Annotation.contains("memtrace:ignore")) {
+        } else if (Annotation.count("memtrace:ignore")) {
           MyMap.addFunctionAnnotation(Func, AnnotationKind::Ignore);
         }
-        if (Annotation.contains("memtrace:all,{")) {
+        if (Annotation.count("memtrace:all,{")) {
           MyMap.addFunctionAnnotation(Func, AnnotationKind::Memtrace);
           MyMap.addSrcLinesAnnotation(Func, getLines(Annotation),
                                       AnnotationKind::Memtrace);
@@ -188,16 +185,15 @@ AnnotationMap parseAnnotations(Module &M) {
 }
 
 // Find functions that need to get picked up that aren't annotated
-void checkRegexFuncMatches(llvm::Module &M, AnnotationMap &AM){
+void appendRegexFuncMatches(llvm::Module &M, AnnotationMap &AM) {
   const StringMap<AnnotationKind> AlwaysMatch = {
-    {"omp", AnnotationKind::Memtrace}
-  };
+      {"omp", AnnotationKind::Memtrace}};
 
-  for(auto const &F : M){
-    auto const& Name = F.getName();
-    for(auto const& Match : AlwaysMatch){
-      if(Name.contains(Match.getKey())){
-        AM.addFunctionAnnotation(&F,Match.second);
+  for (auto const &F : M) {
+    auto const &Name = F.getName();
+    for (auto const &Match : AlwaysMatch) {
+      if (Name.contains(Match.getKey())) {
+        AM.addFunctionAnnotation(&F, Match.second);
       }
     }
   }
