@@ -131,16 +131,31 @@ struct MemtracePass : public ModulePass {
                      {Address, OpSize, ThreadID}, "", PostAtomicInst);
   }
 
+  // Deals with things like _Znam and other special functions
+  bool handleSpecialFunctions(CallSite CS, Value* ThreadID){
+    auto Callee = CS.getCalledFunction();
+    if(Callee->getName() == "_Znam"){
+      // Don't handle _Znam for now since we don't know how many addresses were
+      // actually touched.
+      return true;
+    }
+
+    return false;
+  }
+
   // Handles both CallInst and InvokeInst
-  template <typename CallTypeInst>
-  void handleMemCall(CallTypeInst *CTI, Value *ThreadID) {
-    Function const *TargetFunc = CTI->getCalledFunction();
+  void handleMemCall(CallSite CS, Value *ThreadID) {
+    Function const *TargetFunc = CS.getCalledFunction();
 
     // Most intrinsics we don't care about but we do care about the memory ones
     if (TargetFunc->isIntrinsic()) {
-      if (auto MI = dyn_cast<MemIntrinsic>(CTI)) {
+      if (auto MI = dyn_cast<MemIntrinsic>(CS.getInstruction())) {
         handleMemoryInst(MI, ThreadID);
       }
+      return;
+    }
+    
+    if(handleSpecialFunctions(CS, ThreadID)){
       return;
     }
 
@@ -153,7 +168,7 @@ struct MemtracePass : public ModulePass {
       return;
     }
 
-    std::string CurrentFunction = CTI->getFunction()->getName();
+    std::string CurrentFunction = CS.getInstruction()->getFunction()->getName();
     std::string CalledFunction = TargetFunc->getName();
 
     std::stringstream error;
@@ -207,10 +222,10 @@ struct MemtracePass : public ModulePass {
         handleMemoryInst(dyn_cast<AtomicCmpXchgInst>(I), ThreadID);
         break;
       case Instruction::Call:
-        handleMemCall(dyn_cast<CallInst>(I), ThreadID);
+        handleMemCall(CallSite(dyn_cast<CallInst>(I)), ThreadID);
         break;
       case Instruction::Invoke:
-        handleMemCall(dyn_cast<InvokeInst>(I), ThreadID);
+        handleMemCall(CallSite(dyn_cast<InvokeInst>(I)), ThreadID);
         break;
       case Instruction::Ret:
         stopTracing(I);
