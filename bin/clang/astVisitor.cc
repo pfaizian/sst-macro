@@ -60,7 +60,7 @@ llvm::cl::opt<std::string> ASTVisitorCmdLine::memoizeOpt("memoize",
   llvm::cl::value_desc("[optional] list,of,names"),
   llvm::cl::ValueOptional,
   llvm::cl::cat(sstmacCategoryOpt));
-llvm::cl::opt<std::string> ASTVisitorCmdLine::configModeOpt("confg-mode",
+llvm::cl::opt<std::string> ASTVisitorCmdLine::configModeOpt("config-mode",
   llvm::cl::desc("Compile for standalone config mode for use with CMake and autotools"),
   llvm::cl::value_desc("[optional] list,of,names"),
   llvm::cl::ValueOptional,
@@ -250,7 +250,7 @@ SkeletonASTVisitor::registerNewKeywords(std::ostream& os)
     return;
   }
 
-  os << "#include <sprockit/keyword_registration.h>"
+  os << "\n#include <sprockit/keyword_registration.h>"
      << "\nRegisterKeywords(";
   for (auto& str : pragmaConfig_.newParams){
     os << "\n{\"" << str << "\", \"new keyword\" },";
@@ -2109,7 +2109,7 @@ bool
 SkeletonASTVisitor::TraverseFunctionDecl(clang::FunctionDecl* D)
 {
 
-  if (D->isMain() && refactorMain_){
+  if (D->isMain() && opts_.refactorMain){
     replaceMain(D);
   } else if (D->isTemplateInstantiation()){
     return true; //do not visit implicitly instantiated template stuff
@@ -2634,6 +2634,7 @@ PragmaActivateGuard::init()
     switch (prg->Kind){
       case SSTPragma::StackAlloc:
       case SSTPragma::ImplicitState:
+      case SSTPragma::AdvanceTime:
       case SSTPragma::Memoize:  //always - regardless of skeletonization
       case SSTPragma::Annotate:  //always - regardless of skeletonization
       case SSTPragma::GlobalVariable:
