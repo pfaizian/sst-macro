@@ -233,6 +233,8 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
   parser.add_argument('--no-integrated-cpp', default=False, action="store_true", help="whether to skip preprocessing")
 
   parser.add_argument("-fvisibility", type=str, help="control the visibility of certain symbols")
+
+  parser.add_argument("-print-prog-name", type=str, help="Like -print-file-name, but searches for a program such as cpp")
   
   args, extraArgs = parser.parse_known_args()
 
@@ -378,6 +380,11 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
     ctx.compilerFlags = ctx.cFlags[:]
     if sstCxxArgs.std: #we will still do some C++, make sure we get the right -std flag
       ctx.cxxFlags.append("-std=%s" % sstCxxArgs.std)
+
+  if args.print_prog_name:
+    # tends to be called in configure scripts
+    runCmdArr([ctx.cc, '-print-prog-name=%s' % args.print_prog_name], False)
+    sys.exit()
 
   if args.version:
     import inspect, os
