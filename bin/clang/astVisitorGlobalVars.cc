@@ -87,8 +87,10 @@ SkeletonASTVisitor::setupGlobalReplacement(VarDecl *D, const std::string& namePr
     rewriter_.InsertText(openBrace, "  " + var.anonRecord->typeName, false, false);
     var.typeStr = var.anonRecord->structType + " " + var.anonRecord->typeName;
   } else if (D->getType()->isBooleanType()) {
-    var.retType = "bool*";
-    var.typeStr = "bool";
+    //var.retType = "bool*";
+    //var.typeStr = "bool";
+    var.typeStr = GetAsString(D->getType());
+    var.retType = var.typeStr + "*";
   } else if (isCxx() && D->getType()->isStructureOrClassType()) {
     //it's effing obnoxious that I will have to fix this at some point
     //the problem is that Clang in its stupidity doesn't print this type with correct namespacing
