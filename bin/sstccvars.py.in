@@ -1,5 +1,5 @@
 sstLdFlags = [
-'@LDFLAGS@',
+'@LDFLAGS@'.strip(),
 '-L@libdir@',
 ]
 

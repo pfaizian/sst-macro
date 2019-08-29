@@ -382,7 +382,7 @@ SkeletonASTVisitor::shouldVisitDecl(VarDecl* D)
 
   bool useAllHeaders = false;
   if (headerLoc.isValid() && !useAllHeaders){
-    char fullpathBuffer[1024];
+    char fullpathBuffer[16384];
     const char* fullpath_cstr = realpath(ploc.getFilename(), fullpathBuffer);
     if (fullpath_cstr){
       std::string fullpath(fullpath_cstr);

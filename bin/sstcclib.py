@@ -79,7 +79,12 @@ def runAllCmds(cmds, verbose, doDelete):
   tmpFiles = TempFiles(doDelete, verbose)
   from subprocess import check_output,STDOUT,Popen,PIPE
   import sys
+  cmdsRun = 0
   for outfile, cmdArr, tempFiles in cmds:
+    # Empty strings tend to leak into the argument
+    # list, which causes the command fail
+    cmdArr = [c for c in cmdArr if c is not '']
+
     if verbose:
       sys.stderr.write("===============================\n")
       sys.stderr.write(" ".join(cmdArr))
@@ -87,8 +92,20 @@ def runAllCmds(cmds, verbose, doDelete):
     stdout=None
     if outfile:
       stdout = open(outfile,"w")
-    child = Popen(cmdArr,stdout=stdout)
+
+    # target a specific iteration for gdb
+    if cmdsRun == -1: # disabled for now
+      print(newcmdArr)
+      newcmdArr = ['gdb', '-ex', 'set logging file /dev/stderr', '-ex',
+                   'run %s' % ' '.join(cmdArr[1:]), '-ex', 'bt',
+                   '-ex', 'quit', cmdArr[0]]
+      child = Popen(newcmdArr,stdout=stdout)
+    else:
+      child = Popen(cmdArr,stdout=stdout)
+
     result = child.communicate()
+    cmdsRun += 1
+
     if outfile:
       stdout.close()
     rc = child.returncode
@@ -216,6 +233,8 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
   parser.add_argument('--no-integrated-cpp', default=False, action="store_true", help="whether to skip preprocessing")
 
   parser.add_argument("-fvisibility", type=str, help="control the visibility of certain symbols")
+
+  parser.add_argument("-print-prog-name", type=str, help="Like -print-file-name, but searches for a program such as cpp")
   
   args, extraArgs = parser.parse_known_args()
 
@@ -348,12 +367,12 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
       pass
     ctx.compilerFlags = ctx.cxxFlags[:]
   elif typ.lower() == "c":
-    ctx.compiler = cc
+    ctx.compiler = ctx.cc
     if runClang:
       #always use c++ for linking since we are bringing a bunch of sstmac C++ into the game
-      ctx.ld = cxx
+      ctx.ld = ctx.cxx
     else:
-      ctx.ld = cc 
+      ctx.ld = ctx.cc
     if args.std:
       ctx.cFlags.append("-std=%s" % args.std)
     elif sstCArgs.std:
@@ -362,11 +381,16 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
     if sstCxxArgs.std: #we will still do some C++, make sure we get the right -std flag
       ctx.cxxFlags.append("-std=%s" % sstCxxArgs.std)
 
+  if args.print_prog_name:
+    # tends to be called in configure scripts
+    runCmdArr([ctx.cc, '-print-prog-name=%s' % args.print_prog_name], False)
+    sys.exit()
+
   if args.version:
     import inspect, os
     pathStr = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     print(pathStr)
-    cmd = "%s --version" % (cxx)
+    cmd = "%s --version" % (ctx.cxx)
     os.system(cmd)
     sys.exit()
   elif args.flags:
@@ -386,7 +410,7 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
   if asmFiles:
     #just execute the command as-is with no frills
     cmdArr = [
-      cc
+      ctx.cc
     ]
     cmdArr.extend(sys.argv[1:])
     cmds = [ [None,cmdArr,[]] ]
@@ -457,10 +481,4 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
     if not rc == 0: return rc
 
   return 0
-
-
-
-
-
-
 
