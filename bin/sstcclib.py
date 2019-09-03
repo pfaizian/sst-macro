@@ -189,10 +189,9 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
 
   procTree = getProcTree()[1:] #throw out python command
   parentProc = procTree[0]
-  #if parentProc.endswith("configure"):
-  #  makeBashExe = True
-  # the parent proc here is just launchd - configure vanishes
-  if parentProc.endswith("cmake"):
+  if any(p for p in procTree if os.path.split(p)[-1] == 'configure'):
+    makeBashExe = True
+  elif parentProc.endswith("cmake"):
     numCmakes = 0
     for exe in procTree:
       if exe.endswith("cmake"):
@@ -272,8 +271,8 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
     sarg = arg.strip().strip("'")
     #okay, well, the flags might have literal quotes in them
     #which get lost passing into here - restore all " to literal quotes
-    sarg = sarg.replace("\"",r'\"')
-    sarg = sarg.replace(" ", r'\ ')
+    #sarg = sarg.replace("\"",r'\"')
+    #sarg = sarg.replace(" ", r'\ ')
     if sarg.endswith('.o'):
       givenObjects.append(sarg)
     elif sarg.endswith('.cpp') or sarg.endswith('.cc') or sarg.endswith('.c') \
