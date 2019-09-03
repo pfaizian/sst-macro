@@ -220,7 +220,7 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
   parser.add_argument('-L', action="append", type=str, help="a library path", default=[])
   parser.add_argument('-l', action="append", type=str, help="a library to link against", default=[])
   parser.add_argument('-Wl', action="append", type=str, help="activate a particular linker argument", default=[])
-  parser.add_argument('-O', type=str)
+  parser.add_argument('-O', type=str, default='0', nargs='?')
   parser.add_argument('-c', '--compile', default=False, action="store_true")
   parser.add_argument('-E', '--preprocess', default=False, action="store_true")
   parser.add_argument('-V', '--version', default=False, action="store_true", help="Print SST and compiler version info")
@@ -340,7 +340,7 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
 
   sstparser = argparse.ArgumentParser(description='Process flags for the SST/macro compiler wrapper')
   sstparser.add_argument('-std', type=str, help="specify the standard level for C or C++")
-  sstparser.add_argument('-O', type=str, help="the optimization level for SST/macro - this gets consumed and not forwarded")
+  sstparser.add_argument('-O', type=str, default='0', nargs='?', help="the optimization level for SST/macro - this gets consumed and not forwarded")
   sstparser.add_argument('-g', action="store_true", default=False,
                          help="the debug level for SST/macro = this gets consumed and not forwarded")
   sstCxxFlags = cleanFlag(sstCxxFlagsStr).split()
