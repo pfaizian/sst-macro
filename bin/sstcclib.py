@@ -315,6 +315,12 @@ def run(typ, extraLibs="", makeLibrary=False, redefineSymbols=True, runClang=Tru
   if args.output == "conftest":
     makeBashExe = True
 
+  # fix for ncurses build system
+  if args.output == "make_hash":
+    makeBashExe = True
+  elif args.output == "make_keys":
+    makeBashExe = True
+
   for entry in sstLdFlags:
     ctx.ldFlags.append(cleanFlag(entry))
 

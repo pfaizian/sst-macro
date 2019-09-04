@@ -649,6 +649,13 @@ typedef float my512 __attribute__((__vector_size__(64)));
 typedef double my512d __attribute__((__vector_size__(64)));
 typedef long long my512i __attribute__((__vector_size__(64)));
 
+typedef float _Float32;
+typedef float _Float64;
+typedef float _Float128;
+typedef float _Float32x;
+typedef float _Float64x;
+typedef float _Float128x;
+
 typedef int mymask8;
 typedef int mymask16;
 typedef int mymask32;
