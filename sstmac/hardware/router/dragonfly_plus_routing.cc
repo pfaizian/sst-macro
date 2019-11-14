@@ -378,7 +378,7 @@ class DragonflyPlusRandomMinimalRouter : public Router {
 	if (my_g_ == dstG)
 	  port = randomNumber(dfly_->a(), attempt, seed);
 	else
-	  port = gateways[rn].first % dfly_->h();
+	  port = gateways[rn].first % dfly_->a();
 	hdr->edge_port = port;
       }
     } else if (my_g_ == dstG){
