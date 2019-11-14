@@ -46,6 +46,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #define SSTMAC_HARDWARE_NETWORK_TOPOLOGY_dragonfly_plus_H_INCLUDED
 
 #include <sstmac/hardware/topology/dragonfly.h>
+#include <sstmac/hardware/topology/dfly_group_wiring.h>
 
 namespace sstmac {
 namespace hw {

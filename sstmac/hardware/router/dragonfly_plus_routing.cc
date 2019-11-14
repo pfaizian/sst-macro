@@ -290,6 +290,127 @@ class DragonflyPlusParRouter : public DragonflyPlusAlltoallMinimalRouter {
 
 };
 
+class DragonflyPlusRandomMinimalRouter : public Router {
+ public:
+  struct header : public Packet::Header {};
+
+  SST_ELI_REGISTER_DERIVED(
+    Router,
+    DragonflyPlusRandomMinimalRouter,
+    "macro",
+    "dragonfly_plus_random_minimal",
+    SST_ELI_ELEMENT_VERSION(1,0,0),
+    "router implementing minimal routing for dragonfly+ with random global wiring")
+
+  DragonflyPlusRandomMinimalRouter(SST::Params& params, Topology *top,
+                         NetworkSwitch *netsw)
+    : Router(params, top, netsw)
+  {
+    dfly_ = safe_cast(DragonflyPlus, top);
+    num_leaf_switches_ = dfly_->g() * dfly_->a();
+    //stagger by switch id
+    //rotater_ = (my_addr_) % dfly_->a();
+
+    //covering_ = dfly_->h() / (dfly_->g() - 1);
+
+    int mod = dfly_->h() % (dfly_->g() - 1);
+
+    //grp_rotaters_.resize(dfly_->g());
+    //for (int i=0; i < dfly_->g(); ++i){
+    // grp_rotaters_[i] = 0;
+    //}
+
+    my_g_ = (my_addr_%num_leaf_switches_) / dfly_->a();
+    my_row_ = my_addr_ / num_leaf_switches_;
+
+
+    //std::vector<int> connected;
+    //int my_a = dfly_->computeA(my_addr_);
+    /*dfly_->groupWiring()->connectedRouters(my_a, my_g_, connected);
+    for (int p=0; p < connected.size(); ++p){
+      int my_expected_g = p / covering_;
+      if (my_expected_g >= my_g_){
+        ++my_expected_g;
+      }
+      int dst = connected[p];
+      int actual_g = dfly_->computeG(dst);
+      if (my_expected_g != actual_g){
+        spkt_abort_printf("Router %d expected group %d on port %d, but got group %d",
+                          my_addr_, my_expected_g, p, actual_g);
+      }
+    }
+    */
+    static_route_ = params.find<bool>("static", false);
+  }
+
+  int numVC() const override {
+    return 1;
+  }
+
+  std::string toString() const override {
+    return "dragonfly+ minimal router";
+  }
+
+  void route(Packet *pkt) override {
+    auto* hdr = pkt->rtrHeader<header>();
+    SwitchId ej_addr = pkt->toaddr() / dfly_->concentration();
+    if (ej_addr == my_addr_){
+      hdr->edge_port = pkt->toaddr() % dfly_->concentration() + dfly_->a();
+      hdr->deadlock_vc = 0;
+      return;
+    }
+
+    int dstG = (ej_addr % num_leaf_switches_) / dfly_->a();
+    std::vector<std::pair<int, int>> gateways;
+    uint32_t seed = netsw_->now().time.ticks();
+    int attempt = 0;
+    int port = -1;
+    dfly_->groupWiring()->connectedToGroup(my_g_, dstG, gateways);    
+    int rn = -1;
+    if (my_g_ != dstG)
+      rn = randomNumber(gateways.size(), attempt, seed);
+    
+    if (my_row_ == 0){
+      if (static_route_){
+	rter_debug("static route");
+        hdr->edge_port = ej_addr % dfly_->a();
+      } else {
+	if (my_g_ == dstG)
+	  port = randomNumber(dfly_->a(), attempt, seed);
+	else
+	  port = gateways[rn].first % dfly_->h();
+	hdr->edge_port = port;
+      }
+    } else if (my_g_ == dstG){
+      hdr->edge_port = ej_addr % dfly_->a();
+    } else {
+      std::vector<int> connected;
+      std::vector<int> pool;
+      int my_a = dfly_->computeA(my_addr_);
+      dfly_->groupWiring()->connectedRouters(my_a, my_g_, connected);
+      for (int i = 0; i < connected.size(); i++)
+	{
+	  if (connected[i] / dfly_->a() == dstG )
+	    pool.push_back(i);
+	}
+      
+      port = pool[randomNumber(pool.size(), attempt, seed)];
+      hdr->edge_port = port + dfly_->a();
+    }
+    hdr->deadlock_vc = 0;
+    rter_debug("gateway port: %d, my_addr: %d, ej_addr: %d", hdr->edge_port, my_addr_, ej_addr);
+  }
+
+ protected:
+  int num_leaf_switches_;
+  int rotater_;
+  int my_g_;
+  int my_row_;
+  std::vector<int> grp_rotaters_;
+  int covering_;
+  DragonflyPlus* dfly_;
+  bool static_route_;
+};
 
 }
 }

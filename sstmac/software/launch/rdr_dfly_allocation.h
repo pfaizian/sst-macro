@@ -1,4 +1,4 @@
-/**
+/*
 Copyright 2009-2018 National Technology and Engineering Solutions of Sandia, 
 LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government 
 retains certain rights in this software.
@@ -42,32 +42,32 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Questions? Contact sst-macro-help@sandia.gov
 */
 
-#ifndef random_alloCATION_H
-#define random_alloCATION_H
+#ifndef rdr_dfly_alloCATION_H
+#define rdr_dfly_alloCATION_H
 
 #include <sstmac/software/launch/node_allocator.h>
 
 namespace sstmac {
 namespace sw {
 
-class RandomAllocation : public NodeAllocator
+class RDRDflyAllocation : public NodeAllocator
 {
  public:
   SST_ELI_REGISTER_DERIVED(
     NodeAllocator,
-    RandomAllocation,
+    RDRDflyAllocation,
     "macro",
-    "random",
+    "rdr_dfly",
     SST_ELI_ELEMENT_VERSION(1,0,0),
-    "Allocate a random set of nodes from the list of available nodes")
+    "Allocate all nodes in label order from a randomly selected router, and repeat")
 
-  RandomAllocation(SST::Params& params);
 
   std::string toString() const override {
-    return "random allocation";
+    return "random router dfly allocation";
   }
-
-  virtual ~RandomAllocation() throw ();
+  
+  RDRDflyAllocation(SST::Params& params);
+  virtual ~RDRDflyAllocation() throw ();
 
   bool allocate(
     int nnode_requested,
@@ -76,8 +76,6 @@ class RandomAllocation : public NodeAllocator
 
  protected:
   RNG::UniformInteger* rng_;
-
- private:
   int num_groups_;
 
 };
@@ -87,4 +85,4 @@ class RandomAllocation : public NodeAllocator
 } // end of namespace sstmac
 
 
-#endif // random_alloCATION_H
+#endif // rdr_dfly_alloCATION_H

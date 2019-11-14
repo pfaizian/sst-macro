@@ -712,6 +712,9 @@ class DragonflyPARRouter : public DragonflyUGALRouter {
     return "dragonfly PAR router";
   }
 
+  int numVC() const override {
+    return 8;
+  }
   DragonflyPARRouter(SST::Params& params, Topology *top,
                        NetworkSwitch *netsw)
     : DragonflyUGALRouter(params, top, netsw)

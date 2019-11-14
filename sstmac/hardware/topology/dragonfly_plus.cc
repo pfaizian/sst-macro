@@ -67,11 +67,20 @@ static const double PI = 3.141592653589793238462;
 DragonflyPlus::DragonflyPlus(SST::Params& params) :
   Dragonfly(params)
 {
-  if (h_ % (g_-1)){
+  /*if (h_ % (g_-1)){
     spkt_abort_printf("dragonfly+ currently requires an all-to-all group connectivity");
-  }
+    }*/
 
   num_leaf_switches_ = a_*g_;
+  
+  if (params.contains("group_connections")){
+    h_ = params.find<int>("group_connections");
+  } else {
+    h_ = params.find<int>("h");
+  }
+  
+  group_wiring_ = sprockit::create<InterGroupWiring>(
+   "macro", params.find<std::string>("inter_group", "circulant"), params, a_, g_, h_);
 
   vtk_row_spacing_ = params.find<double>("vtk_row_spacing", 2.0);
 }

@@ -42,49 +42,74 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Questions? Contact sst-macro-help@sandia.gov
 */
 
-#ifndef random_alloCATION_H
-#define random_alloCATION_H
+#ifndef SSTMAC_HARDWARE_NETWORK_TOPOLOGY_dfly_group_wiring_H_INCLUDED
+#define SSTMAC_HARDWARE_NETWORK_TOPOLOGY_dfly_group_wiring_H_INCLUDED
 
-#include <sstmac/software/launch/node_allocator.h>
 
 namespace sstmac {
-namespace sw {
+namespace hw {
 
-class RandomAllocation : public NodeAllocator
-{
+class InterGroupWiring {
  public:
-  SST_ELI_REGISTER_DERIVED(
-    NodeAllocator,
-    RandomAllocation,
-    "macro",
-    "random",
-    SST_ELI_ELEMENT_VERSION(1,0,0),
-    "Allocate a random set of nodes from the list of available nodes")
+  SPKT_DECLARE_BASE(InterGroupWiring)
+  SPKT_DECLARE_CTOR(
+    SST::Params&,
+    int, /* a=num switches per group */
+    int, /* g=num groups */
+    int /* h=num group links per switch */)
 
-  RandomAllocation(SST::Params& params);
+  virtual ~InterGroupWiring() {}
 
-  std::string toString() const override {
-    return "random allocation";
-  }
+  /**
+   * @brief group_port
+   * @param srcA
+   * @param srcG
+   * @param dstG
+   * @return The port on which router (srcA, srcG) connects to group dstG
+   */
+  virtual int inputGroupPort(int srcA, int srcG, int srcH, int dstA, int dstG) const = 0;
 
-  virtual ~RandomAllocation() throw ();
+  /**
+   * @brief connected_routers
+   * @param a The src router index within the group
+   * @param g The src router group
+   * @param connected [in-out] The routers (switch id) for each inter-group interconnection
+   * @return The number of routers in connected array
+   */
+  virtual void connectedRouters(int a, int g, std::vector<int>& connected) const = 0;
 
-  bool allocate(
-    int nnode_requested,
-    const ordered_node_set& available,
-    ordered_node_set& allocation) const override;
+  /**
+   * @brief connected_to_group
+   * @param srcG
+   * @param dstG
+   * @param connected [in-out] The list of all intra-group routers in range (0 ... a-1)
+   *                  that have connections to a router in group dstG
+   * @return The number of routers in group srcG with connections to dstG
+   */
+  virtual void connectedToGroup(int srcG, int dstG, std::vector<std::pair<int,int>>& connected) const = 0;
+
+  virtual SwitchId randomIntermediate(Router* rtr, SwitchId current_sw, SwitchId dest_sw, uint32_t seed);
 
  protected:
-  RNG::UniformInteger* rng_;
+  /**
+   * @brief inter_group_wiring
+   * @param params
+   * @param a  The number of routers per group
+   * @param g  The number of groups
+   * @param h  The number of group links per router
+   */
+  InterGroupWiring(SST::Params& params, int a, int g, int h);
 
- private:
-  int num_groups_;
-
+ protected:
+  /** Number of routers per group */
+  int a_;
+  /** Number of groups */
+  int g_;
+  /** Number of group connections per router */
+  int h_;
 };
 
-
 }
-} // end of namespace sstmac
+} //end of namespace sstmac
 
-
-#endif // random_alloCATION_H
+#endif

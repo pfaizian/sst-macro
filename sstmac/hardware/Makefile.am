@@ -96,6 +96,7 @@ nobase_library_include_HEADERS += \
   topology/cascade.h \
   topology/dragonfly.h \
   topology/dragonfly_plus.h \
+  topology/dfly_group_wiring.h \
   topology/fat_tree.h \
   topology/file.h \
   topology/torus.h \
@@ -147,6 +148,7 @@ libsstmac_hw_la_SOURCES +=  \
   topology/cascade.cc \
   topology/dragonfly.cc \
   topology/dragonfly_plus.cc \
+  topology/dfly_group_wiring.cc \
   topology/fat_tree.cc \
   topology/file.cc \
   topology/torus.cc \
