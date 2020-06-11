@@ -48,6 +48,11 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <sstmac/hardware/topology/dragonfly.h>
 #include <sstmac/hardware/topology/dfly_group_wiring.h>
 
+#define MAX_ROUTER 2200
+#define MAX_PORT 64
+
+typedef int (*mytype)[MAX_ROUTER][MAX_PORT];
+typedef double (*mytype1)[MAX_ROUTER][MAX_PORT];
 namespace sstmac {
 namespace hw {
 
@@ -67,7 +72,60 @@ class DragonflyPlus : public Dragonfly
     "implements a Dragonfly+ with fat-tree groups")
 
   DragonflyPlus(SST::Params& params);
+  /* ......................... */
+   int all_link_state1[MAX_ROUTER][MAX_PORT]={{0}};
+   double  all_link_state_timestamp[MAX_ROUTER][MAX_PORT]={{0.0}};
+   int cc = 0;
+   long long int x13=0;
+   long long int y13=0;
+   long long int z13=0;
+   long long int w13=0;
+    mytype global_array()
+    {
+       mytype p = &all_link_state1;
+       return p;
+    }
 
+    mytype1 global_timestamp_array()
+    {
+       mytype1 p = &all_link_state_timestamp;
+       return p;
+    }
+
+    long long int* total_minimal_path()
+    {
+         long long int *x1=&x13;
+         return x1;
+    }
+    long long int* total_non_minimal_path()
+    {
+         long long int *y1=&y13;
+         return y1;
+    }
+	long long int* total_local_up_path()
+    {
+         long long int *z1=&z13;
+         return z1;
+    }
+	long long int* total_local_down_path()
+    {
+         long long int *w1=&w13;
+         return w1;
+    }
+   
+  /*
+   void initialize_array(){
+   int ii;
+   for (ii=0; ii<2200; ii++){
+         all_link_state[ii] = (int *) malloc(64 * sizeof(int));
+     }
+   for (ii=0; ii<2200; ii++){
+       for(int j=0;j<64;j++)
+         all_link_state[ii][j]=0;     }
+
+   }*/
+   
+  /*..........................*/
   std::string toString() const override {
     return "dragonfly+";
   }
@@ -78,7 +136,13 @@ class DragonflyPlus : public Dragonfly
 
   void connectedOutports(SwitchId src, std::vector<Connection>& conns) const override;
 
-  virtual ~DragonflyPlus() {}
+  virtual ~DragonflyPlus()
+  {
+	  top_debug("Total Number of Minimal Path = %lld",x13);
+	  top_debug("Total Number of Non-Minimal Path = %lld",y13);
+	  top_debug("Total Number of Local Up Path = %lld",z13);
+	  top_debug("Total Number of Local Down Path = %lld",w13);
+  }
 
   VTKSwitchGeometry getVtkGeometry(SwitchId sid) const override;
 
